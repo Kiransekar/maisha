@@ -1,6 +1,12 @@
 # Sentinel-C
 
+[![CI](https://github.com/Kiransekar/sentinel-c/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiransekar/sentinel-c/actions/workflows/ci.yml)
+&nbsp;![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
+&nbsp;![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 **An agent harness for MISRA C:2012, BARR-C:2018 and CERT C compliance — usable from any agentic IDE.**
+
+> ⚠️ **Sentinel-C is a workflow orchestrator and audit-trail layer, not a qualified/certified static-analysis tool.** Its findings do **not** by themselves satisfy tool-qualification requirements for DO-178C, ISO 26262 or IEC 62304, and running it is not a formal compliance certification. It is best used *upstream* of a qualified engine (see [Scope & Limitations](#scope--limitations)).
 
 Sentinel-C is not another linter. It is the *deterministic half* of an autonomous
 compliance workflow. Your IDE's LLM (Claude Code, Cursor, Windsurf, Zed, anything
@@ -23,12 +29,50 @@ does everything that must never hallucinate:
   a fix hint, strategies that *already failed* on it, relevant memory notes and
   cross-standard equivalents. Guard rails: iteration budgets, stall detection, and
   oscillation freezing (a finding that regresses twice is frozen as `needs_human`).
+- **A verification gate** — a fix is not `resolved` just because the analyzer
+  stopped flagging it. It enters `pending_verification` until a passing test run
+  or an explicit human approval confirms it; semantic-risk and high-severity
+  findings always require human sign-off. See [below](#the-verification-gate).
 - **Reporting** — per-standard compliance matrices, a markdown report with a
   deviation register, and SARIF 2.1.0 export with `partialFingerprints` for CI.
 
 The three rule knowledge bases (~80 rules) contain **original paraphrased
 summaries** written for this project — no standard text is reproduced. For
 authoritative wording you still need the official MISRA / BARR / SEI CERT documents.
+
+---
+
+## Scope & Limitations
+
+**What Sentinel-C *is*:**
+
+- A **workflow orchestrator** for agent-driven compliance triage and fix loops.
+- A **persistent audit-trail layer**: finding lifecycle, fix attempts, deviation
+  records, suppressions, and a verification gate that records *how* every fix was
+  confirmed (test run vs. human sign-off, and by whom).
+- A **pre-certification cleanup** tool that catches and helps fix the obvious
+  violations early — in the IDE loop, before code reaches a qualified engine.
+
+**What Sentinel-C is *not*:**
+
+- **Not a qualified or certified analysis tool.** Its engines are the
+  open-source cppcheck + clang-tidy + a native analyzer — none carry a tool
+  qualification kit. DO-178C / ISO 26262 / IEC 62304 generally require the
+  analysis tool *itself* to be qualified or proven-in-use; Sentinel-C does not
+  meet that bar and does not claim to.
+- **Not complete rule coverage.** ~80 curated rules across three standards is a
+  fraction of MISRA C:2012 (180+ rules/directives with amendments) or CERT C.
+  Detection is bounded by the underlying engines, not the curated set.
+- **Not a substitute for human review.** By default a fix is never marked
+  `resolved` on a clean rescan alone — a passing test run or an explicit human
+  approval is required, and semantic-risk / high-severity findings *always*
+  require human sign-off (see [The verification gate](#the-verification-gate)).
+
+**Recommended use for certification pipelines:** run Sentinel-C's loop for early,
+agent-driven cleanup, then hand off to a qualified engine (Astrée, Polyspace,
+Helix QAC, Parasoft C/C++test, IAR C-STAT) for the evidence an auditor accepts.
+SARIF interchange to layer Sentinel-C's loop/memory on top of those engines is on
+the roadmap.
 
 ---
 
@@ -66,7 +110,8 @@ sentinelc rule "MISRA 21.3"          # explain a rule + cross-standard refs
 sentinelc session begin src/
 sentinelc session batch              # next prioritized batch with briefings
 # ...edit code (you or your agent)...
-sentinelc session verify             # rescan, diff, grade attempts
+sentinelc session verify             # rescan, diff, grade attempts, run the test gate
+sentinelc approve <fingerprint> --by lead@example.com   # human sign-off on a verified fix
 sentinelc session status
 
 sentinelc deviate "MISRA 19.2" --scope "drivers/**" \
@@ -115,8 +160,9 @@ The recommended agent protocol is documented in
 | `compliance_begin_session` | Baseline scan + session with budgets (`max_iterations`, `batch_size`) |
 | `compliance_next_batch` | Next prioritized batch, regressions first, with per-finding briefings |
 | `compliance_record_attempt` | Log the strategy used on a finding (auto-graded on verify) |
-| `compliance_verify` | Rescan, diff, grade attempts, advance state machine |
-| `compliance_session_status` | Progress, iteration budget, state (`active`/`converged`/`stalled`/`budget_exhausted`) |
+| `compliance_verify` | Rescan, diff, grade attempts, run the test gate, advance state machine |
+| `compliance_approve_finding` | Human sign-off moving a `pending_verification` finding to `resolved` (required for semantic-risk / high-severity fixes) |
+| `compliance_session_status` | Progress, iteration budget, state (`active`/`awaiting_verification`/`converged`/`stalled`/`budget_exhausted`) |
 | `compliance_add_deviation` | MISRA-style deviation record (justification ≥ 15 chars enforced) |
 | `compliance_suppress_finding` | Mark a fingerprint as false positive (reason required) |
 | `memory_note` / `memory_search` / `memory_stats` | Project convention memory |
@@ -151,6 +197,38 @@ Design principles:
    freezing guarantee a session always ends in a well-defined state.
 4. **Compliance is a process, not a scan.** Deviations and suppressions are
    first-class, auditable records — exactly as MISRA compliance expects.
+
+## The verification gate
+
+The trap Sentinel-C guards against: the only judge of a fix is the same analyzer
+whose blind spot may have created the finding. "The warning stopped firing"
+rewards the syntactically minimal edit — often the one most likely to change
+behavior at a boundary. Casting a signed sentinel (`-1` = "no limit") to
+`uint32_t` to silence a signed/unsigned comparison warning turns "no limit" into
+"an enormous limit" — the rescan passes, no static check ever catches it.
+
+So a fix does **not** go straight to `resolved`. It enters
+`pending_verification` and leaves only under the session's **`verification_policy`**:
+
+| Policy | A pending fix becomes `resolved` when… |
+|---|---|
+| `analyzer_only` | the analyzer stops flagging it (⚠️ not recommended for compliance work) |
+| `test_gated` | a configured `test_command` exits 0 |
+| `human_gated` | a human calls `approve_finding` |
+
+Default: `test_gated` if a `test_command` is configured, else `human_gated`.
+Regardless of policy, **semantic-risk findings** (casts, comparisons, sign
+conversions, control-flow changes) and **high-severity findings** always require
+human approval — a green test suite that never exercises the sentinel case cannot
+resolve them. Every resolution records how it was confirmed (`analyzer`/`test`/
+`human`) and, for human sign-off, `approved_by`.
+
+```bash
+sentinelc session begin src/ --verification-policy test_gated --test-command "make test"
+# ...agent fixes, then:
+sentinelc session verify <id>          # -> awaiting_verification if fixes need sign-off
+sentinelc approve <fingerprint> --by lead@example.com
+```
 
 ## Development
 
