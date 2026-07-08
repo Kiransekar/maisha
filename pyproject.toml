@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinel-c"
+version = "0.1.0"
+description = "Agent harness for MISRA C, BARR-C and CERT C compliance: persistent memory, engineered fix loops, and an MCP server usable from any agentic IDE."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Sentinel-C contributors" }]
+keywords = ["misra", "cert-c", "barr-c", "static-analysis", "mcp", "agent", "embedded"]
+dependencies = [
+    "mcp>=1.2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+sentinelc = "sentinelc.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["sentinelc*"]
+
+[tool.setuptools.package-data]
+"sentinelc.rules" = ["*.json"]

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sentinel-c": {
+      "command": "sentinelc",
+      "args": ["serve"],
+      "env": { "SENTINELC_PROJECT": "/absolute/path/to/your/project" }
+    }
+  }
+}
