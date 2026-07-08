@@ -72,6 +72,10 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
   Detection is bounded by the underlying engines, not the curated set. Every
   covered rule and which analyzer backs it is listed in
   [COVERAGE.md](COVERAGE.md) (generated from the code, so gaps are explicit).
+  A real-world run against the FreeRTOS kernel — with a measured false-positive
+  rate and the tool bugs it surfaced — is in [BENCHMARKS.md](BENCHMARKS.md).
+  Headline lesson: **pass your include paths to cppcheck/clang-tidy**, or most
+  of the substantive findings are configuration false positives.
 - **Not a substitute for human review.** By default a fix is never marked
   `resolved` on a clean rescan alone — a passing test run or an explicit human
   approval is required, and semantic-risk / high-severity findings *always*
