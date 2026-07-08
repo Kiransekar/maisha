@@ -30,6 +30,7 @@ Guards:
 
 from __future__ import annotations
 
+import subprocess
 import time
 from pathlib import Path
 
@@ -44,7 +45,18 @@ DEFAULT_CONFIG = {
     "oscillation_limit": 2,     # regress_count at which a finding is frozen
     "severity_floor": "minor",  # ignore anything below this
     "analyzers": None,          # None = all available
+    # How a finding is allowed to leave the queue as 'resolved':
+    #   analyzer_only  the analyzer stopped flagging it (NOT recommended for
+    #                  compliance work — the analyzer is the only judge of its
+    #                  own blind spot; see the sentinel-cast trap in the tests)
+    #   test_gated     a configured test/build command must exit 0 first
+    #   human_gated    a human must call approve_finding first
+    # None => auto: test_gated if test_command is set, else human_gated.
+    "verification_policy": None,
+    "test_command": None,       # shell command; exit 0 confirms pending fixes
 }
+
+_VALID_POLICIES = ("analyzer_only", "test_gated", "human_gated")
 
 _SEV_ORDER = ["blocker", "critical", "major", "minor", "info"]
 
@@ -60,19 +72,44 @@ class LoopEngine:
         self.mem = MemoryStore(self.root)
 
     # ------------------------------------------------------------------ scan
-    def scan(self, paths: list[str], analyzers: list[str] | None = None) -> dict:
+    def scan(self, paths: list[str], analyzers: list[str] | None = None,
+             gate: bool = False) -> dict:
         findings, used = run_scan(paths, self.root, analyzers)
         from ..analyzers.base import collect_c_files
         scanned = [str(f.resolve().relative_to(self.root)) if str(f).startswith(str(self.root))
                    else str(f) for f in collect_c_files(paths, self.root)]
-        diff = self.mem.sync_scan(findings, scanned)
+        diff = self.mem.sync_scan(findings, scanned, gate=gate)
         return {
             "analyzers_used": used,
             "files_scanned": len(scanned),
             "total_findings": len(findings),
             "diff": {k: len(v) for k, v in diff.items()},
             "open": len(self.mem.open_findings(limit=100000)),
+            "pending_verification": self.mem.count_pending(),
         }
+
+    @staticmethod
+    def _policy(cfg: dict) -> str:
+        p = cfg.get("verification_policy")
+        if p in _VALID_POLICIES:
+            return p
+        return "test_gated" if cfg.get("test_command") else "human_gated"
+
+    def _run_tests(self, cmd: str) -> dict:
+        # ponytail: pass/fail on exit code only — doesn't diff new-vs-baseline
+        # failures. Add a baseline capture if a flaky suite needs delta scoring.
+        try:
+            proc = subprocess.run(cmd, shell=True, cwd=self.root,
+                                  capture_output=True, text=True, timeout=1800)
+        except Exception as e:  # noqa: BLE001 — surface any launch/timeout failure to the loop
+            return {"ran": False, "passed": False, "error": str(e), "command": cmd}
+        return {"ran": True, "passed": proc.returncode == 0, "exit_code": proc.returncode,
+                "command": cmd, "output_tail": (proc.stdout + proc.stderr)[-2000:]}
+
+    def approve(self, fingerprint: str, approved_by: str) -> dict:
+        if not (approved_by or "").strip():
+            return {"error": "approved_by is required — record who signed off on this fix."}
+        return self.mem.approve_finding(fingerprint, approved_by.strip())
 
     # --------------------------------------------------------------- session
     def begin_session(self, paths: list[str], config: dict | None = None) -> dict:
@@ -142,7 +179,8 @@ class LoopEngine:
     def verify(self, session_id: str) -> dict:
         sess = self._require(session_id)
         cfg = sess["config"]
-        result = self.scan(cfg["paths"], cfg.get("analyzers"))
+        policy = self._policy(cfg)
+        result = self.scan(cfg["paths"], cfg.get("analyzers"), gate=policy != "analyzer_only")
         iteration = sess["iteration"] + 1
         history = sess["history"]
         prev_open = history[-1]["open"] if history else result["open"]
@@ -152,12 +190,33 @@ class LoopEngine:
         for f in self.mem.open_findings(limit=100000):
             self.mem.close_pending_attempts(f["fingerprint"], "persisting")
 
-        history.append({"iteration": iteration, "event": "verify",
-                        "open": open_now, "diff": result["diff"], "ts": time.time()})
+        # verification gate: a fix that merely silenced the analyzer is NOT
+        # resolved until a passing test run or a human confirms it.
+        test_run, confirmed_by_test = None, []
+        if policy == "test_gated" and cfg.get("test_command"):
+            test_run = self._run_tests(cfg["test_command"])
+            if test_run.get("passed"):
+                confirmed_by_test = self.mem.confirm_pending_by_test()
+
+        pending = self.mem.count_pending()
+        awaiting_human = self.mem.count_pending(require_human=True)
+        history.append({"iteration": iteration, "event": "verify", "open": open_now,
+                        "pending": pending, "diff": result["diff"], "ts": time.time()})
 
         state, reason = "active", ""
-        if open_now == 0:
+        if open_now == 0 and pending == 0:
             state, reason = "converged", "All findings resolved, suppressed, or deviated."
+        elif open_now == 0 and pending > 0:
+            need = []
+            if awaiting_human:
+                need.append(f"{awaiting_human} require human approval (call approve_finding)")
+            if policy == "test_gated" and not cfg.get("test_command"):
+                need.append("no test_command configured to auto-confirm the rest")
+            elif policy == "human_gated":
+                need.append(f"{pending - awaiting_human} more await approval under human_gated policy")
+            state = "awaiting_verification"
+            reason = ("Analyzer-clean, but the fixes are UNVERIFIED — "
+                      + "; ".join(need) + ". They do not count as resolved until confirmed.")
         elif iteration >= cfg.get("max_iterations", 10):
             state, reason = "budget_exhausted", f"Iteration budget ({cfg['max_iterations']}) reached."
         else:
@@ -179,13 +238,22 @@ class LoopEngine:
             "iteration": iteration,
             "state": state,
             "reason": reason,
+            "verification_policy": policy,
             "open_before": prev_open,
             "open_now": open_now,
+            "pending_verification": pending,
+            "awaiting_human_approval": awaiting_human,
+            "confirmed_by_test": confirmed_by_test,
+            "test_run": test_run,
             "diff": result["diff"],
+            "pending_findings": self._brief_many(self.mem.pending_findings()),
             "regressions": self._brief_many(
                 [f for f in self.mem.open_findings(limit=100) if f["status"] == "regressed"]),
-            "next": ("Session complete." if state != "active"
-                     else "Call next_batch for the next set of findings."),
+            "next": ("Session complete." if state == "converged"
+                     else "Approve verified fixes (approve_finding) or call next_batch."
+                     if state == "awaiting_verification"
+                     else "Call next_batch for the next set of findings." if state == "active"
+                     else "Session ended."),
         }
 
     def session_status(self, session_id: str) -> dict:

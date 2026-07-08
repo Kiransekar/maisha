@@ -64,7 +64,10 @@ def test_memory_lifecycle_and_loop(tmp_path):
     shutil.copy(FIXTURE, bad)
 
     eng = LoopEngine(proj)
-    sess = eng.begin_session(["src"], {"analyzers": ["native"], "batch_size": 3})
+    # analyzer_only: exercise the raw resolve/converge/regress path (the verification
+    # gate is covered separately in test_verification_gate.py).
+    sess = eng.begin_session(["src"], {"analyzers": ["native"], "batch_size": 3,
+                                       "verification_policy": "analyzer_only"})
     sid = sess["session_id"]
     assert sess["baseline"]["open"] > 5
 

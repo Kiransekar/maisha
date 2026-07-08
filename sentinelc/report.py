@@ -31,6 +31,8 @@ def compliance_matrix(mem: MemoryStore) -> dict:
             "rules_deviated": sorted(deviated),
             "open_findings": sum(1 for r in rows if r["standard"] == std
                                  and r["status"] in ("open", "regressed")),
+            "pending_verification": sum(1 for r in rows if r["standard"] == std
+                                        and r["status"] == "pending_verification"),
             "resolved_findings": sum(1 for r in rows if r["standard"] == std
                                      and r["status"] == "resolved"),
             "clean": not violated,
@@ -54,12 +56,13 @@ def markdown_report(mem: MemoryStore, project_name: str = "") -> str:
         "",
         "## Standards matrix",
         "",
-        "| Standard | Rules checked | Open | Resolved | Violated rules | Deviated rules | Clean |",
-        "|---|---|---|---|---|---|---|",
+        "| Standard | Rules checked | Open | Pending | Resolved | Violated rules | Deviated rules | Clean |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for std, m in matrix.items():
         lines.append(
-            f"| {std} | {m['rules_checked']} | {m['open_findings']} | {m['resolved_findings']} | "
+            f"| {std} | {m['rules_checked']} | {m['open_findings']} | "
+            f"{m['pending_verification']} | {m['resolved_findings']} | "
             f"{', '.join(m['rules_violated']) or '—'} | {', '.join(m['rules_deviated']) or '—'} | "
             f"{'✅' if m['clean'] else '❌'} |")
     lines += ["", "## Open findings", ""]

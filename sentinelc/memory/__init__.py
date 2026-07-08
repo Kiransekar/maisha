@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import re
 import sqlite3
 import time
 import uuid
@@ -24,6 +25,28 @@ from pathlib import Path
 from typing import Optional
 
 from ..model import Finding
+
+# A fix to one of these is behavior-changing at edge cases (sentinel values,
+# saturation limits, sign boundaries) in a way NO static rescan can catch — the
+# rule only checks that the pattern is gone, never that the specific edit kept
+# the intended meaning. Such findings always need human sign-off, never a bare
+# "the warning stopped firing". See the sentinel-cast example in the tests.
+_RISK_RULES = ("INT30", "INT31", "INT32", "INT33", "FLP",
+               " 10.", " 11.", " 13.", " 14.", " 15.", " 16.")
+_CAST_RE = re.compile(r"\(\s*(?:unsigned|signed|u?int\w*|char|short|long|size_t)\s*\)")
+_HIGH_SEV = ("blocker", "critical")
+
+
+def semantic_risk(rule_id: str, line_content: str) -> bool:
+    if any(t in rule_id for t in _RISK_RULES):
+        return True
+    return bool(line_content and _CAST_RE.search(line_content))
+
+
+def requires_human(row: dict) -> bool:
+    """A pending finding an automated test pass may NOT resolve on its own:
+    high-severity (MISRA mandatory/required-tier, CERT L1) or semantic-risk."""
+    return bool(row.get("semantic_risk")) or row.get("severity") in _HIGH_SEV
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS findings (
@@ -38,12 +61,17 @@ CREATE TABLE IF NOT EXISTS findings (
   line_content TEXT,
   context_symbol TEXT,
   fix_hint TEXT,
-  status TEXT NOT NULL DEFAULT 'open',        -- open|resolved|suppressed|deviated|regressed
+  status TEXT NOT NULL DEFAULT 'open',        -- open|pending_verification|resolved|suppressed|deviated|regressed
   seen_count INTEGER NOT NULL DEFAULT 1,
   regress_count INTEGER NOT NULL DEFAULT 0,
   first_seen REAL NOT NULL,
   last_seen REAL NOT NULL,
-  resolved_at REAL
+  resolved_at REAL,
+  semantic_risk INTEGER NOT NULL DEFAULT 0,
+  analyzer_cleared_at REAL,      -- when the analyzer stopped flagging it (still unverified)
+  verification_method TEXT,      -- analyzer|test|human — how it reached 'resolved'
+  approved_by TEXT,
+  approved_at REAL
 );
 CREATE TABLE IF NOT EXISTS fix_attempts (
   id TEXT PRIMARY KEY,
@@ -97,20 +125,37 @@ class MemoryStore:
         self.db = sqlite3.connect(self.dir / "memory.db")
         self.db.row_factory = sqlite3.Row
         self.db.executescript(_SCHEMA)
+        self._migrate()
         self.db.commit()
 
+    def _migrate(self) -> None:
+        """Add verification-gate columns to findings tables created before they existed."""
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(findings)")}
+        for name, ddl in [("semantic_risk", "INTEGER NOT NULL DEFAULT 0"),
+                          ("analyzer_cleared_at", "REAL"), ("verification_method", "TEXT"),
+                          ("approved_by", "TEXT"), ("approved_at", "REAL")]:
+            if name not in cols:
+                self.db.execute(f"ALTER TABLE findings ADD COLUMN {name} {ddl}")
+
     # ------------------------------------------------------------ scan sync
-    def sync_scan(self, findings: list[Finding], scanned_files: list[str]) -> dict:
+    def sync_scan(self, findings: list[Finding], scanned_files: list[str],
+                  gate: bool = False) -> dict:
         """Reconcile a fresh scan against memory.
 
-        Returns a diff: {new, persisting, resolved, regressed, suppressed, deviated}
-        (lists of fingerprints). A previously-resolved fingerprint reappearing is
-        a *regression* — the loop engine treats those with top priority.
+        Returns a diff: {new, persisting, resolved, pending, regressed, suppressed,
+        deviated} (lists of fingerprints). A previously-resolved fingerprint
+        reappearing is a *regression* — the loop engine treats those with top priority.
+
+        When ``gate`` is True, a finding whose pattern disappears does NOT go
+        straight to ``resolved``; it goes to ``pending_verification``. The only
+        judge of the fix so far is the same analyzer whose blind spots may have
+        created the finding — a passing test run or a human must confirm it
+        before it counts as resolved (see engine verification_policy).
         """
         now = time.time()
         current = {f.fingerprint: f for f in findings}
-        diff = {k: [] for k in ("new", "persisting", "resolved", "regressed",
-                                 "suppressed", "deviated")}
+        diff = {k: [] for k in ("new", "persisting", "resolved", "pending",
+                                 "regressed", "suppressed", "deviated")}
         cur = self.db.execute("SELECT * FROM findings")
         known = {r["fingerprint"]: dict(r) for r in cur.fetchall()}
         scanned = set(scanned_files)
@@ -129,15 +174,17 @@ class MemoryStore:
                 self.db.execute(
                     """INSERT INTO findings (fingerprint, rule_id, standard, severity, file,
                        line, message, analyzer, line_content, context_symbol, fix_hint,
-                       status, first_seen, last_seen)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       status, semantic_risk, first_seen, last_seen)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (fp, f.rule_id, f.standard, f.severity, f.file, f.line, f.message,
                      f.analyzer, f.line_content, f.context_symbol, f.fix_hint,
-                     status, now, now))
+                     status, int(semantic_risk(f.rule_id, f.line_content)), now, now))
                 if status == "open":
                     diff["new"].append(fp)
             else:
                 prev = known[fp]
+                # 'resolved' coming back is a regression; a reappearing 'pending'
+                # (never confirmed) or 'open' is just still-open.
                 regressed = prev["status"] == "resolved" and status == "open"
                 new_status = "regressed" if regressed else status
                 self.db.execute(
@@ -149,18 +196,24 @@ class MemoryStore:
                 elif status == "open":
                     diff["persisting"].append(fp)
 
-        # anything known-open in a scanned file but absent now => resolved
+        # anything known-open in a scanned file but absent now => cleared by the analyzer
         for fp, prev in known.items():
             if fp in current:
                 continue
             if prev["status"] in ("open", "regressed") and prev["file"] in scanned:
-                self.db.execute(
-                    "UPDATE findings SET status='resolved', resolved_at=? WHERE fingerprint=?",
-                    (now, fp))
-                self.db.execute(
-                    "UPDATE fix_attempts SET outcome='resolved' "
-                    "WHERE fingerprint=? AND outcome='pending'", (fp,))
-                diff["resolved"].append(fp)
+                if gate:
+                    self.db.execute(
+                        "UPDATE findings SET status='pending_verification', "
+                        "analyzer_cleared_at=? WHERE fingerprint=?", (now, fp))
+                    diff["pending"].append(fp)
+                else:
+                    self.db.execute(
+                        "UPDATE findings SET status='resolved', resolved_at=?, "
+                        "verification_method='analyzer' WHERE fingerprint=?", (now, fp))
+                    self.db.execute(
+                        "UPDATE fix_attempts SET outcome='resolved' "
+                        "WHERE fingerprint=? AND outcome='pending'", (fp,))
+                    diff["resolved"].append(fp)
         self.db.commit()
         return diff
 
@@ -181,6 +234,52 @@ class MemoryStore:
         r = self.db.execute("SELECT * FROM findings WHERE fingerprint=?",
                             (fingerprint,)).fetchone()
         return dict(r) if r else None
+
+    # ----------------------------------------------------- verification gate
+    def pending_findings(self, require_human: bool | None = None) -> list[dict]:
+        rows = [dict(r) for r in self.db.execute(
+            "SELECT * FROM findings WHERE status='pending_verification'")]
+        if require_human is None:
+            return rows
+        return [r for r in rows if requires_human(r) == require_human]
+
+    def count_pending(self, require_human: bool | None = None) -> int:
+        return len(self.pending_findings(require_human))
+
+    def _mark_resolved(self, fingerprint: str, method: str,
+                       approved_by: str | None = None) -> None:
+        now = time.time()
+        self.db.execute(
+            "UPDATE findings SET status='resolved', resolved_at=?, verification_method=?, "
+            "approved_by=?, approved_at=? WHERE fingerprint=?",
+            (now, method, approved_by, now if approved_by else None, fingerprint))
+        self.db.execute("UPDATE fix_attempts SET outcome='resolved' "
+                        "WHERE fingerprint=? AND outcome='pending'", (fingerprint,))
+
+    def confirm_pending_by_test(self) -> list[str]:
+        """A passing test run confirms pending findings — EXCEPT those that
+        require explicit human sign-off (high-severity / semantic-risk)."""
+        confirmed = []
+        for r in self.pending_findings():
+            if requires_human(r):
+                continue
+            self._mark_resolved(r["fingerprint"], "test")
+            confirmed.append(r["fingerprint"])
+        self.db.commit()
+        return confirmed
+
+    def approve_finding(self, fingerprint: str, approved_by: str) -> dict:
+        r = self.get_finding(fingerprint)
+        if not r:
+            return {"error": f"No finding with fingerprint '{fingerprint}'."}
+        if r["status"] == "resolved":
+            return {"ok": True, "already": "resolved", "fingerprint": fingerprint}
+        if r["status"] != "pending_verification":
+            return {"error": f"Finding is '{r['status']}', not pending_verification — the "
+                             "analyzer still flags it. Fix it (and re-verify) before approving."}
+        self._mark_resolved(fingerprint, "human", approved_by)
+        self.db.commit()
+        return {"ok": True, "resolved": fingerprint, "approved_by": approved_by}
 
     # ---------------------------------------------------------- fix attempts
     def record_fix_attempt(self, fingerprint: str, session_id: str,

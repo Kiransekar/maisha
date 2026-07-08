@@ -131,7 +131,9 @@ def compliance_search_rules(query: str, limit: int = 10) -> str:
 @mcp.tool()
 def compliance_begin_session(paths: list[str], max_iterations: int = 10,
                              batch_size: int = 5,
-                             severity_floor: str = "minor") -> str:
+                             severity_floor: str = "minor",
+                             verification_policy: str | None = None,
+                             test_command: str | None = None) -> str:
     """Start an engineered fix session: runs a baseline scan and opens a loop
     with budgets, stall detection and oscillation guards.
 
@@ -141,12 +143,22 @@ def compliance_begin_session(paths: list[str], max_iterations: int = 10,
         batch_size: Findings handed out per next_batch call (default 5).
         severity_floor: Ignore findings below this severity
             (blocker|critical|major|minor|info; default minor).
+        verification_policy: How a fix is confirmed resolved:
+            "analyzer_only" (the analyzer stopped flagging it — NOT recommended
+            for compliance; it can't see behavior changes at sentinel/boundary
+            values), "test_gated" (a passing test_command confirms fixes), or
+            "human_gated" (a human must call compliance_approve_finding).
+            Default: test_gated if test_command is given, else human_gated.
+        test_command: Shell command that must exit 0 to confirm fixes at verify
+            time, e.g. "make test". High-severity and semantic-risk findings
+            (casts/comparisons/conversions) still require human approval.
 
     Follow with compliance_next_batch.
     """
     return _j(_engine().begin_session(paths, {
         "max_iterations": max_iterations, "batch_size": batch_size,
-        "severity_floor": severity_floor}))
+        "severity_floor": severity_floor, "verification_policy": verification_policy,
+        "test_command": test_command}))
 
 
 @mcp.tool()
@@ -198,6 +210,22 @@ def compliance_session_status(session_id: str) -> str:
         session_id: Session id (or use the id from begin_session).
     """
     return _j(_engine().session_status(session_id))
+
+
+@mcp.tool()
+def compliance_approve_finding(fingerprint: str, approved_by: str) -> str:
+    """Human sign-off that a fix is genuinely correct, moving a finding from
+    pending_verification to resolved. Required for high-severity and
+    semantic-risk findings (casts, comparisons, sign conversions, control-flow
+    changes) whose fix a passing test suite alone cannot vouch for — the
+    analyzer only checks the pattern is gone, never that the edit preserved the
+    intended behavior at sentinel/boundary values.
+
+    Args:
+        fingerprint: The pending finding's fingerprint (from compliance_verify).
+        approved_by: Who is signing off — recorded in the audit trail.
+    """
+    return _j(_engine().approve(fingerprint, approved_by))
 
 
 # ---------------------------------------------------- deviations/suppression

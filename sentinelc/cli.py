@@ -73,13 +73,20 @@ def cmd_session(args):
         paths = ([args.session_id] if args.session_id else []) + list(args.paths or [])
         args.paths = paths or ["."]
         _print(eng.begin_session(args.paths, {
-            "max_iterations": args.max_iterations, "batch_size": args.batch_size}))
+            "max_iterations": args.max_iterations, "batch_size": args.batch_size,
+            "verification_policy": args.verification_policy,
+            "test_command": args.test_command}))
     elif args.action == "batch":
         _print(eng.next_batch(args.session_id))
     elif args.action == "verify":
         _print(eng.verify(args.session_id))
     elif args.action == "status":
         _print(eng.session_status(args.session_id))
+
+
+def cmd_approve(args):
+    eng = _engine(args)
+    _print(eng.approve(args.fingerprint, args.by))
 
 
 def cmd_deviate(args):
@@ -156,7 +163,18 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("paths", nargs="*")
     s.add_argument("--max-iterations", type=int, default=10)
     s.add_argument("--batch-size", type=int, default=5)
+    s.add_argument("--verification-policy",
+                   choices=["analyzer_only", "test_gated", "human_gated"],
+                   help="How a fix is confirmed resolved (default: test_gated if "
+                        "--test-command is set, else human_gated).")
+    s.add_argument("--test-command",
+                   help="Shell command that must exit 0 to confirm fixes (e.g. 'make test').")
     s.set_defaults(fn=cmd_session)
+
+    s = sub.add_parser("approve", help="Approve a pending_verification finding as resolved")
+    s.add_argument("fingerprint")
+    s.add_argument("--by", required=True, help="Who is signing off (recorded in the audit trail).")
+    s.set_defaults(fn=cmd_approve)
 
     s = sub.add_parser("deviate", help="Record a formal rule deviation")
     s.add_argument("rule")
