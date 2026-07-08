@@ -112,6 +112,20 @@ def test_deviation_and_suppression(tmp_path):
     assert not any(f["rule_id"] == "MISRA-C:2012 Rule 21.6" for f in opens)
 
 
+def test_concurrent_session_begin_is_guarded(tmp_path):
+    proj = tmp_path / "cc"
+    (proj / "src").mkdir(parents=True)
+    (proj / "src" / "a.c").write_text('void f(void){ char b[4]; strcpy(b, "x"); }\n')
+    eng = LoopEngine(proj)
+    first = eng.begin_session(["src"], {"analyzers": ["native"]})
+    assert "session_id" in first
+    # a second begin on the same project is refused (would race on finding state)
+    second = eng.begin_session(["src"], {"analyzers": ["native"]})
+    assert "error" in second and second["active_session_id"] == first["session_id"]
+    # ...unless forced
+    assert "session_id" in eng.begin_session(["src"], {"analyzers": ["native"]}, force=True)
+
+
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-v"]))

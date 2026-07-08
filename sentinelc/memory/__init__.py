@@ -124,6 +124,10 @@ class MemoryStore:
         self.dir.mkdir(exist_ok=True)
         self.db = sqlite3.connect(self.dir / "memory.db")
         self.db.row_factory = sqlite3.Row
+        # WAL lets a reader and a writer coexist, so a CI scan and a local
+        # session on the same .sentinelc/memory.db don't block each other as hard.
+        self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("PRAGMA busy_timeout=5000")
         self.db.executescript(_SCHEMA)
         self._migrate()
         self.db.commit()

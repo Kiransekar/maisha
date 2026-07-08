@@ -133,7 +133,8 @@ def compliance_begin_session(paths: list[str], max_iterations: int = 10,
                              batch_size: int = 5,
                              severity_floor: str = "minor",
                              verification_policy: str | None = None,
-                             test_command: str | None = None) -> str:
+                             test_command: str | None = None,
+                             force: bool = False) -> str:
     """Start an engineered fix session: runs a baseline scan and opens a loop
     with budgets, stall detection and oscillation guards.
 
@@ -152,13 +153,15 @@ def compliance_begin_session(paths: list[str], max_iterations: int = 10,
         test_command: Shell command that must exit 0 to confirm fixes at verify
             time, e.g. "make test". High-severity and semantic-risk findings
             (casts/comparisons/conversions) still require human approval.
+        force: Start a new session even if one is already active on this project
+            (otherwise begin returns the active session id so you can resume it).
 
     Follow with compliance_next_batch.
     """
     return _j(_engine().begin_session(paths, {
         "max_iterations": max_iterations, "batch_size": batch_size,
         "severity_floor": severity_floor, "verification_policy": verification_policy,
-        "test_command": test_command}))
+        "test_command": test_command}, force=force))
 
 
 @mcp.tool()

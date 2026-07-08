@@ -131,8 +131,17 @@ class LoopEngine:
         return self.mem.approve_finding(fingerprint, approved_by.strip())
 
     # --------------------------------------------------------------- session
-    def begin_session(self, paths: list[str], config: dict | None = None) -> dict:
+    def begin_session(self, paths: list[str], config: dict | None = None,
+                      force: bool = False) -> dict:
         cfg = {**DEFAULT_CONFIG, **(config or {}), "paths": paths}
+        # Guard against two sessions racing on the same .sentinelc/memory.db
+        # (e.g. a CI job and a local run). They'd fight over finding state.
+        existing = self.mem.latest_active_session()
+        if existing and not force:
+            return {"error": "A session is already active on this project "
+                             f"({existing['id']}). Resume it (session_status/next_batch), "
+                             "or pass force to start a fresh one anyway.",
+                    "active_session_id": existing["id"]}
         baseline = self.scan(paths, cfg.get("analyzers"))
         sid = self.mem.create_session(cfg)
         self.mem.update_session(sid, history=[{

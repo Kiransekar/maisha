@@ -233,6 +233,18 @@ sentinelc session verify <id>          # -> awaiting_verification if fixes need 
 sentinelc approve <fingerprint> --by lead@example.com
 ```
 
+## Teams & concurrency
+
+Project memory lives in a per-project SQLite file, `.sentinelc/memory.db`.
+
+- **Gitignore it.** It is local, machine-specific state, not source — add
+  `.sentinelc/` to `.gitignore` (this repo already does). To share state
+  deliberately, export a `compliance_report` (SARIF/JSON), don't commit the DB.
+- **Concurrent access.** The DB runs in WAL mode with a busy-timeout, so a CI
+  scan and a local session can read/write without hard-blocking. `session begin`
+  refuses to start a second session while one is already active on the same
+  project (pass `--force` to override) so two runs don't race on finding state.
+
 ## Development
 
 ```bash

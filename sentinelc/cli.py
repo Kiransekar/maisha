@@ -77,7 +77,7 @@ def cmd_session(args):
         _print(eng.begin_session(args.paths, {
             "max_iterations": args.max_iterations, "batch_size": args.batch_size,
             "verification_policy": args.verification_policy,
-            "test_command": args.test_command}))
+            "test_command": args.test_command}, force=args.force))
     elif args.action == "batch":
         _print(eng.next_batch(args.session_id))
     elif args.action == "verify":
@@ -179,6 +179,8 @@ def build_parser() -> argparse.ArgumentParser:
                         "--test-command is set, else human_gated).")
     s.add_argument("--test-command",
                    help="Shell command that must exit 0 to confirm fixes (e.g. 'make test').")
+    s.add_argument("--force", action="store_true",
+                   help="Start a new session even if one is already active on this project.")
     s.set_defaults(fn=cmd_session)
 
     s = sub.add_parser("approve", help="Approve a pending_verification finding as resolved")
