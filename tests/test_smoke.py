@@ -126,6 +126,17 @@ def test_concurrent_session_begin_is_guarded(tmp_path):
     assert "session_id" in eng.begin_session(["src"], {"analyzers": ["native"]}, force=True)
 
 
+def test_coverage_doc_is_current():
+    # COVERAGE.md is generated; fail loudly if it drifts from the rule KB / analyzers.
+    import importlib.util
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("gen_coverage", root / "tools" / "gen_coverage.py")
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    assert (root / "COVERAGE.md").read_text("utf-8") == gen.render(), \
+        "COVERAGE.md is stale — run `python tools/gen_coverage.py`"
+
+
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-v"]))

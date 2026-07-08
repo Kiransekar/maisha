@@ -62,7 +62,9 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
   meet that bar and does not claim to.
 - **Not complete rule coverage.** ~80 curated rules across three standards is a
   fraction of MISRA C:2012 (180+ rules/directives with amendments) or CERT C.
-  Detection is bounded by the underlying engines, not the curated set.
+  Detection is bounded by the underlying engines, not the curated set. Every
+  covered rule and which analyzer backs it is listed in
+  [COVERAGE.md](COVERAGE.md) (generated from the code, so gaps are explicit).
 - **Not a substitute for human review.** By default a fix is never marked
   `resolved` on a clean rescan alone — a passing test run or an explicit human
   approval is required, and semantic-risk / high-severity findings *always*
