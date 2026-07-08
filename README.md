@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/banner.svg" alt="Maisha — MISRA, BARR-C and CERT C compliance harness" width="100%"></p>
+
 # Maisha
 
 [![CI](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml)
