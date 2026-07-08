@@ -1,11 +1,11 @@
-"""Sentinel-C MCP server.
+"""Maisha MCP server.
 
 Exposes the whole harness over the Model Context Protocol (stdio transport),
 so ANY agentic IDE that speaks MCP — Claude Code, Cursor, Windsurf, VS Code
 Copilot agent mode, Zed, Continue, JetBrains AI — can drive the compliance
 loop with zero IDE-specific code.
 
-Run:  sentinelc serve --project /path/to/project
+Run:  maishac serve --project /path/to/project
 """
 
 from __future__ import annotations
@@ -22,9 +22,9 @@ from .rules import REGISTRY
 from . import report as report_mod
 
 mcp = FastMCP(
-    "sentinel-c",
+    "maisha",
     instructions=(
-        "Sentinel-C is a compliance harness for MISRA C:2012, BARR-C:2018 and CERT C. "
+        "Maisha is a compliance harness for MISRA C:2012, BARR-C:2018 and CERT C. "
         "Typical flow: compliance_begin_session -> compliance_next_batch -> "
         "(compliance_record_attempt, edit code) -> compliance_verify -> repeat until "
         "converged. Use compliance_explain_rule for guidance, memory_* tools to persist "
@@ -37,7 +37,7 @@ _ENGINE: LoopEngine | None = None
 def _engine() -> LoopEngine:
     global _ENGINE
     if _ENGINE is None:
-        root = os.environ.get("SENTINELC_PROJECT", os.getcwd())
+        root = os.environ.get("MAISHAC_PROJECT", os.getcwd())
         _ENGINE = LoopEngine(root)
     return _ENGINE
 

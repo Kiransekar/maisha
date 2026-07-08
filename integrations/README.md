@@ -1,7 +1,7 @@
 # IDE integration snippets
 
-All hosts use the same stdio MCP server: command `sentinelc`, args `["serve"]`,
-env `SENTINELC_PROJECT` pointing at the project root to scan.
+All hosts use the same stdio MCP server: command `maishac`, args `["serve"]`,
+env `MAISHAC_PROJECT` pointing at the project root to scan.
 
 - **Claude Code** — copy `claude-code.mcp.json` contents into `.mcp.json` at your
   project root (Claude Code substitutes the workspace path automatically; if your

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Sentinel-C are documented here. Format loosely follows
+All notable changes to Maisha are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); this project uses [SemVer](https://semver.org/).
 
 ## [Unreleased]
@@ -15,8 +15,8 @@ All notable changes to Sentinel-C are documented here. Format loosely follows
 - **Concurrency (§10).** SQLite runs in WAL mode with a busy-timeout so a CI
   scan and a local session don't hard-block; `session begin` refuses a second
   active session on a project (`--force` to override); README documents
-  gitignoring `.sentinelc/memory.db`.
-- **SARIF import.** `sentinelc import findings.sarif` (and MCP
+  gitignoring `.maishac/memory.db`.
+- **SARIF import.** `maishac import findings.sarif` (and MCP
   `compliance_import_sarif`) ingests any SARIF 2.1.0 engine's findings — a
   qualified engine (Helix QAC, Polyspace, Parasoft, IAR C-STAT) or cppcheck's
   own `--output-format=sarif` — into the same loop/memory/gate. Recognized
@@ -35,11 +35,11 @@ All notable changes to Sentinel-C are documented here. Format loosely follows
   `analyzer_cleared_at`, `semantic_risk`; SQLite schema migrated in place.
 - New session state `awaiting_verification`; compliance report gained a
   `Pending` column so gated findings stay visible.
-- CLI: `sentinelc approve <fp> --by NAME`; `session begin --verification-policy`
+- CLI: `maishac approve <fp> --by NAME`; `session begin --verification-policy`
   and `--test-command`. MCP: `compliance_approve_finding` plus policy arguments
   on `compliance_begin_session`.
 - `README` install path for cppcheck/clang-tidy via pip wheels (no root needed).
-- Graceful error when the `mcp` package is missing on `sentinelc serve`.
+- Graceful error when the `mcp` package is missing on `maishac serve`.
 - `LICENSE` (MIT) and this changelog.
 
 ### Fixed

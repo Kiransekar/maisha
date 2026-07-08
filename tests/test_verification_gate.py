@@ -3,8 +3,8 @@ until a passing test run or a human confirms it (backlog §1/§5)."""
 
 from pathlib import Path
 
-from sentinelc.engine import LoopEngine
-from sentinelc.memory import semantic_risk
+from maishac.engine import LoopEngine
+from maishac.memory import semantic_risk
 
 # An unbraced control statement: the native analyzer flags MISRA Rule 15.6, which
 # is semantic-risk — like the signed/unsigned sentinel example, a minimal edit can

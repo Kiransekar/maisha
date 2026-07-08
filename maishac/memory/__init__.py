@@ -1,4 +1,4 @@
-"""Persistent project memory (SQLite, stored at <project>/.sentinelc/memory.db).
+"""Persistent project memory (SQLite, stored at <project>/.maishac/memory.db).
 
 Memory is what turns a scanner into a harness. Five kinds of memory:
 
@@ -120,12 +120,12 @@ CREATE INDEX IF NOT EXISTS idx_attempts_fp ON fix_attempts(fingerprint);
 class MemoryStore:
     def __init__(self, project_root: str | Path):
         self.root = Path(project_root).resolve()
-        self.dir = self.root / ".sentinelc"
+        self.dir = self.root / ".maishac"
         self.dir.mkdir(exist_ok=True)
         self.db = sqlite3.connect(self.dir / "memory.db")
         self.db.row_factory = sqlite3.Row
         # WAL lets a reader and a writer coexist, so a CI scan and a local
-        # session on the same .sentinelc/memory.db don't block each other as hard.
+        # session on the same .maishac/memory.db don't block each other as hard.
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA busy_timeout=5000")
         self.db.executescript(_SCHEMA)

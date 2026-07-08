@@ -1,6 +1,6 @@
 """The engineered fix loop.
 
-Sentinel-C deliberately splits responsibilities:
+Maisha deliberately splits responsibilities:
 
   deterministic side (this engine)      probabilistic side (the IDE's LLM)
   ------------------------------------  ----------------------------------
@@ -134,7 +134,7 @@ class LoopEngine:
     def begin_session(self, paths: list[str], config: dict | None = None,
                       force: bool = False) -> dict:
         cfg = {**DEFAULT_CONFIG, **(config or {}), "paths": paths}
-        # Guard against two sessions racing on the same .sentinelc/memory.db
+        # Guard against two sessions racing on the same .maishac/memory.db
         # (e.g. a CI job and a local run). They'd fight over finding state.
         existing = self.mem.latest_active_session()
         if existing and not force:

@@ -28,8 +28,8 @@ _SARIF_CERT = re.compile(r"\b([A-Z]{3}\d{2}-C)\b", re.I)
 
 
 def _resolve_sarif_rule(rule_id: str) -> dict | None:
-    """Best-effort map of a foreign SARIF ruleId onto a Sentinel-C rule.
-    Handles Sentinel-C's own ids, MISRA (misra-c2012-21.3), CERT (cert-err34-c
+    """Best-effort map of a foreign SARIF ruleId onto a Maisha rule.
+    Handles Maisha's own ids, MISRA (misra-c2012-21.3), CERT (cert-err34-c
     or ERR34-C) and cppcheck semantic ids (nullPointer -> EXP34-C)."""
     meta = REGISTRY.get(rule_id) or REGISTRY.resolve(rule_id)
     if meta:
@@ -46,7 +46,7 @@ def _resolve_sarif_rule(rule_id: str) -> dict | None:
 
 
 def parse_sarif(data: dict, root: Path) -> list[Finding]:
-    """Parse SARIF 2.1.0 results into Findings. Reuses Sentinel-C fingerprints
+    """Parse SARIF 2.1.0 results into Findings. Reuses Maisha fingerprints
     from partialFingerprints when present (so its own export round-trips)."""
     findings: list[Finding] = []
     for run in data.get("runs", []):
@@ -76,7 +76,7 @@ def parse_sarif(data: dict, root: Path) -> list[Finding]:
             if not line_content and uri and line:
                 line_content = _read_line(root / uri, line)
 
-            fp = (res.get("partialFingerprints") or {}).get("sentinelc/v1")
+            fp = (res.get("partialFingerprints") or {}).get("maishac/v1")
             if not fp:
                 if line_content:
                     fp = compute_fingerprint(rid, relpath(root / uri, root), line_content)
@@ -131,7 +131,7 @@ def markdown_report(mem: MemoryStore, project_name: str = "") -> str:
     stats = mem.stats()
     matrix = compliance_matrix(mem)
     lines = [
-        f"# Sentinel-C Compliance Report{(' — ' + project_name) if project_name else ''}",
+        f"# Maisha Compliance Report{(' — ' + project_name) if project_name else ''}",
         "",
         f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}",
         "",
@@ -184,7 +184,7 @@ def sarif(mem: MemoryStore) -> dict:
             "level": {"blocker": "error", "critical": "error",
                       "major": "warning", "minor": "note", "info": "note"}.get(f["severity"], "warning"),
             "message": {"text": f["message"] or meta.get("summary", "")},
-            "partialFingerprints": {"sentinelc/v1": f["fingerprint"]},
+            "partialFingerprints": {"maishac/v1": f["fingerprint"]},
             "locations": [{
                 "physicalLocation": {
                     "artifactLocation": {"uri": f["file"]},
@@ -195,7 +195,7 @@ def sarif(mem: MemoryStore) -> dict:
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
         "runs": [{
-            "tool": {"driver": {"name": "Sentinel-C", "version": "0.1.0",
+            "tool": {"driver": {"name": "Maisha", "version": "0.1.0",
                                   "rules": list(rules_seen.values())}},
             "results": results,
         }],

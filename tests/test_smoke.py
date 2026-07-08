@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from sentinelc.rules import REGISTRY
-from sentinelc.analyzers.native import NativeAnalyzer
-from sentinelc.engine import LoopEngine
+from maishac.rules import REGISTRY
+from maishac.analyzers.native import NativeAnalyzer
+from maishac.engine import LoopEngine
 
 FIXTURE = Path(__file__).resolve().parent.parent / "examples" / "bad.c"
 

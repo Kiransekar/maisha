@@ -1,4 +1,4 @@
-/* examples/bad.c — deliberately non-compliant fixture for Sentinel-C demos.
+/* examples/bad.c — deliberately non-compliant fixture for Maisha demos.
  * Violates MISRA C:2012, BARR-C:2018 and CERT C rules on purpose.
  */
 #include <stdio.h>

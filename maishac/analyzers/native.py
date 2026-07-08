@@ -1,6 +1,6 @@
 """Native analyzer: zero-dependency lexical + light structural checks.
 
-This guarantees Sentinel-C produces useful findings even on machines without
+This guarantees Maisha produces useful findings even on machines without
 cppcheck or clang-tidy. It runs on a comment/string-stripped view of each file
 so patterns never fire inside literals, and reports against the *original*
 source line for correct fingerprints.

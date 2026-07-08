@@ -1,6 +1,6 @@
-# Sentinel-C Agent Playbook
+# Maisha Agent Playbook
 
-This is the recommended protocol for an LLM agent driving Sentinel-C through MCP.
+This is the recommended protocol for an LLM agent driving Maisha through MCP.
 Paste it into your IDE's rules/system file (e.g. `CLAUDE.md`, `.cursorrules`) or
 hand it to the agent at the start of a compliance task.
 

@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Kiran Sekar and Sentinel-C contributors
+Copyright (c) 2026 Kiran Sekar and Maisha contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@ SOFTWARE.
 
 ---
 
-This license covers the Sentinel-C software only. MISRA®, BARR-C and SEI CERT C
+This license covers the Maisha software only. MISRA®, BARR-C and SEI CERT C
 are the property of their respective owners; the bundled rule knowledge bases
-contain original paraphrased summaries, not reproduced standard text. Sentinel-C
+contain original paraphrased summaries, not reproduced standard text. Maisha
 output does not constitute a formal compliance certification.

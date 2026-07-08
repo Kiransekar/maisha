@@ -1,9 +1,9 @@
 {
   "mcpServers": {
-    "sentinel-c": {
-      "command": "sentinelc",
+    "maisha": {
+      "command": "maishac",
       "args": ["serve"],
-      "env": { "SENTINELC_PROJECT": "/absolute/path/to/your/project" }
+      "env": { "MAISHAC_PROJECT": "/absolute/path/to/your/project" }
     }
   }
 }

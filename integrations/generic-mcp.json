@@ -1,7 +1,7 @@
 {
-  "name": "sentinel-c",
+  "name": "maisha",
   "transport": "stdio",
-  "command": "sentinelc",
+  "command": "maishac",
   "args": ["serve"],
-  "env": { "SENTINELC_PROJECT": "/absolute/path/to/your/project" }
+  "env": { "MAISHAC_PROJECT": "/absolute/path/to/your/project" }
 }

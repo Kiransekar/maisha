@@ -1,12 +1,12 @@
-"""SARIF import: layer Sentinel-C's memory/loop/gate on top of any SARIF-emitting
+"""SARIF import: layer Maisha's memory/loop/gate on top of any SARIF-emitting
 engine, including a qualified one (backlog §7)."""
 
 import json
 import shutil
 from pathlib import Path
 
-from sentinelc.engine import LoopEngine
-from sentinelc import report as report_mod
+from maishac.engine import LoopEngine
+from maishac import report as report_mod
 
 FIXTURE = Path(__file__).resolve().parent.parent / "examples" / "bad.c"
 
@@ -79,7 +79,7 @@ def test_own_sarif_export_roundtrips(tmp_path):
     eng2 = LoopEngine(reimport)
     eng2.import_sarif(str(sf))
     got = {f["fingerprint"] for f in eng2.mem.open_findings(limit=10000)}
-    # partialFingerprints carry Sentinel-C identity across the round-trip
+    # partialFingerprints carry Maisha identity across the round-trip
     assert exported and exported <= got
 
 

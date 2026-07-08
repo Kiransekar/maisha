@@ -1,4 +1,4 @@
-"""Core shared data model for Sentinel-C.
+"""Core shared data model for Maisha.
 
 Every analyzer, the memory store, the loop engine and the MCP layer speak
 one language: the Finding. A Finding carries a *stable fingerprint* so the

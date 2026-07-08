@@ -14,7 +14,7 @@ Analyzer backing, as the code (not the external tools) maps it:
                 MISRA *Rule*), plus the CERT ids in cppcheck's CPPCHECK_TO_CERT.
   * clang-tidy — cert-* checks map onto every CERT rule.
 Whether a given cppcheck/clang-tidy rule actually fires depends on that external
-engine's own coverage; this table reflects what Sentinel-C maps, not a promise
+engine's own coverage; this table reflects what Maisha maps, not a promise
 the engine implements every one.
 """
 from __future__ import annotations
@@ -23,8 +23,8 @@ import re
 from importlib import resources
 from pathlib import Path
 
-from sentinelc.rules import REGISTRY
-from sentinelc.analyzers.cppcheck import CPPCHECK_TO_CERT
+from maishac.rules import REGISTRY
+from maishac.analyzers.cppcheck import CPPCHECK_TO_CERT
 
 ROOT = Path(__file__).resolve().parent.parent
 STANDARDS = ["MISRA-C:2012", "BARR-C:2018", "CERT-C"]
@@ -34,7 +34,7 @@ _CAT_ORDER = {"mandatory": 0, "required": 1, "advisory": 2, "": 3}
 
 def native_ids() -> set[str]:
     """Canonical ids the native analyzer can emit, read from its own source."""
-    src = (ROOT / "sentinelc" / "analyzers" / "native.py").read_text("utf-8")
+    src = (ROOT / "maishac" / "analyzers" / "native.py").read_text("utf-8")
     ids = set()
     for q in re.findall(r'"((?:MISRA|CERT|BARR)[^"]*)"', src):
         meta = REGISTRY.resolve(q)
@@ -81,7 +81,7 @@ def render() -> str:
          "**This is a curated subset, and says so.** The full standards are far",
          "larger than what ships here — MISRA C:2012 has 180+ rules/directives and",
          "CERT C has hundreds of guidelines. The tables below list exactly the rules",
-         "Sentinel-C carries fix guidance and cross-references for. A gap here is a",
+         "Maisha carries fix guidance and cross-references for. A gap here is a",
          "known gap, which is the point: no silent \"we cover MISRA\" claim.",
          "",
          "**Analyzer columns** reflect what the code *maps*, not what an external",

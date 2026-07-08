@@ -1,16 +1,16 @@
-# Sentinel-C
+# Maisha
 
-[![CI](https://github.com/Kiransekar/sentinel-c/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiransekar/sentinel-c/actions/workflows/ci.yml)
+[![CI](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml)
 &nbsp;![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 &nbsp;![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
 **An agent harness for MISRA C:2012, BARR-C:2018 and CERT C compliance — usable from any agentic IDE.**
 
-> ⚠️ **Sentinel-C is a workflow orchestrator and audit-trail layer, not a qualified/certified static-analysis tool.** Its findings do **not** by themselves satisfy tool-qualification requirements for DO-178C, ISO 26262 or IEC 62304, and running it is not a formal compliance certification. It is best used *upstream* of a qualified engine (see [Scope & Limitations](#scope--limitations)).
+> ⚠️ **Maisha is a workflow orchestrator and audit-trail layer, not a qualified/certified static-analysis tool.** Its findings do **not** by themselves satisfy tool-qualification requirements for DO-178C, ISO 26262 or IEC 62304, and running it is not a formal compliance certification. It is best used *upstream* of a qualified engine (see [Scope & Limitations](#scope--limitations)).
 
-Sentinel-C is not another linter. It is the *deterministic half* of an autonomous
+Maisha is not another linter. It is the *deterministic half* of an autonomous
 compliance workflow. Your IDE's LLM (Claude Code, Cursor, Windsurf, Zed, anything
-that speaks [MCP](https://modelcontextprotocol.io)) does the code edits; Sentinel-C
+that speaks [MCP](https://modelcontextprotocol.io)) does the code edits; Maisha
 does everything that must never hallucinate:
 
 - **Scanning & evidence merging** — a zero-dependency native analyzer plus adapters
@@ -20,7 +20,7 @@ does everything that must never hallucinate:
 - **Stable fingerprints** — findings are identified by
   `sha1(rule + file + normalized line content + enclosing function)`, *not* line
   numbers, so they survive edits, insertions and refactors across sessions.
-- **Persistent memory** — a SQLite store per project (`.sentinelc/memory.db`)
+- **Persistent memory** — a SQLite store per project (`.maishac/memory.db`)
   tracking finding lifecycle (open → resolved → regressed), every fix attempt and
   its outcome, false-positive suppressions, MISRA-style deviation records with
   justification/approver/expiry, and free-form project convention notes.
@@ -44,7 +44,7 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
 
 ## Scope & Limitations
 
-**What Sentinel-C *is*:**
+**What Maisha *is*:**
 
 - A **workflow orchestrator** for agent-driven compliance triage and fix loops.
 - A **persistent audit-trail layer**: finding lifecycle, fix attempts, deviation
@@ -53,12 +53,12 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
 - A **pre-certification cleanup** tool that catches and helps fix the obvious
   violations early — in the IDE loop, before code reaches a qualified engine.
 
-**What Sentinel-C is *not*:**
+**What Maisha is *not*:**
 
 - **Not a qualified or certified analysis tool.** Its engines are the
   open-source cppcheck + clang-tidy + a native analyzer — none carry a tool
   qualification kit. DO-178C / ISO 26262 / IEC 62304 generally require the
-  analysis tool *itself* to be qualified or proven-in-use; Sentinel-C does not
+  analysis tool *itself* to be qualified or proven-in-use; Maisha does not
   meet that bar and does not claim to.
 - **Not complete rule coverage.** ~80 curated rules across three standards is a
   fraction of MISRA C:2012 (180+ rules/directives with amendments) or CERT C.
@@ -70,10 +70,10 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
   approval is required, and semantic-risk / high-severity findings *always*
   require human sign-off (see [The verification gate](#the-verification-gate)).
 
-**Recommended use for certification pipelines:** run Sentinel-C's loop for early,
+**Recommended use for certification pipelines:** run Maisha's loop for early,
 agent-driven cleanup, then hand off to a qualified engine (Astrée, Polyspace,
 Helix QAC, Parasoft C/C++test, IAR C-STAT) for the evidence an auditor accepts.
-Those engines emit SARIF, and `sentinelc import findings.sarif` layers Sentinel-C's
+Those engines emit SARIF, and `maishac import findings.sarif` layers Maisha's
 loop, memory, verification gate and deviation register on top of their findings —
 recognized MISRA/CERT ruleIds map onto the knowledge base, and imported findings
 are never cleared by a native rescan.
@@ -85,7 +85,7 @@ are never cleared by a native rescan.
 Requires Python 3.10+.
 
 ```bash
-pip install ./sentinel-c          # or: pip install -e ./sentinel-c for development
+pip install ./maisha          # or: pip install -e ./maisha for development
 ```
 
 Optional but strongly recommended external analyzers:
@@ -98,7 +98,7 @@ apt install cppcheck clang-tidy
 pip install cppcheck clang-tidy
 ```
 
-Sentinel-C degrades gracefully: any analyzer not on `PATH` is skipped and the
+Maisha degrades gracefully: any analyzer not on `PATH` is skipped and the
 native analyzer always works.
 
 ## Quickstart (CLI)
@@ -106,24 +106,24 @@ native analyzer always works.
 ```bash
 cd your-firmware-project
 
-sentinelc scan src/                  # one-shot scan, syncs memory
-sentinelc findings --limit 20        # ranked open findings
-sentinelc rule "MISRA 21.3"          # explain a rule + cross-standard refs
+maishac scan src/                  # one-shot scan, syncs memory
+maishac findings --limit 20        # ranked open findings
+maishac rule "MISRA 21.3"          # explain a rule + cross-standard refs
 
 # The engineered loop (what an agent drives via MCP):
-sentinelc session begin src/
-sentinelc session batch              # next prioritized batch with briefings
+maishac session begin src/
+maishac session batch              # next prioritized batch with briefings
 # ...edit code (you or your agent)...
-sentinelc session verify             # rescan, diff, grade attempts, run the test gate
-sentinelc approve <fingerprint> --by lead@example.com   # human sign-off on a verified fix
-sentinelc session status
+maishac session verify             # rescan, diff, grade attempts, run the test gate
+maishac approve <fingerprint> --by lead@example.com   # human sign-off on a verified fix
+maishac session status
 
-sentinelc deviate "MISRA 19.2" --scope "drivers/**" \
+maishac deviate "MISRA 19.2" --scope "drivers/**" \
     --justification "Union required for hardware register overlay mapping" \
     --approver lead@example.com --expires 2027-01-01
-sentinelc suppress <fingerprint> --reason "false positive: macro expansion"
-sentinelc note "This codebase uses FreeRTOS; heap_4 allocator is approved" --tags misra-21.3
-sentinelc report --format sarif > compliance.sarif
+maishac suppress <fingerprint> --reason "false positive: macro expansion"
+maishac note "This codebase uses FreeRTOS; heap_4 allocator is approved" --tags misra-21.3
+maishac report --format sarif > compliance.sarif
 ```
 
 ## Quickstart (any agentic IDE, via MCP)
@@ -134,10 +134,10 @@ Add the server to your IDE's MCP configuration (ready-made snippets in
 ```json
 {
   "mcpServers": {
-    "sentinel-c": {
-      "command": "sentinelc",
+    "maisha": {
+      "command": "maishac",
       "args": ["serve"],
-      "env": { "SENTINELC_PROJECT": "/path/to/your/project" }
+      "env": { "MAISHAC_PROJECT": "/path/to/your/project" }
     }
   }
 }
@@ -145,7 +145,7 @@ Add the server to your IDE's MCP configuration (ready-made snippets in
 
 Then tell your agent something like:
 
-> Begin a Sentinel-C compliance session on `src/`, work through batches until
+> Begin a Maisha compliance session on `src/`, work through batches until
 > converged, record every attempt, and add deviations only where a fix is
 > genuinely impossible.
 
@@ -180,10 +180,10 @@ The recommended agent protocol is documented in
 │  LLM agent: reads briefings, edits code, records attempts               │
 └──────────────▲──────────────────────────────────────────────────────────┘
                │ MCP (stdio)
-┌──────────────┴──────────────  sentinel-c  ──────────────────────────────┐
+┌──────────────┴──────────────  maisha  ──────────────────────────────┐
 │ engine/    LoopEngine: sessions, batching, budgets, stall/oscillation   │
 │ memory/    SQLite: findings, fix_attempts, deviations, suppressions,    │
-│            notes, sessions  (.sentinelc/memory.db)                      │
+│            notes, sessions  (.maishac/memory.db)                      │
 │ analyzers/ native (0-dep) + cppcheck(+MISRA addon) + clang-tidy(cert-*) │
 │            → fingerprint-deduped, severity-sorted evidence               │
 │ rules/     MISRA C:2012 + BARR-C:2018 + CERT C KBs, fuzzy resolver,     │
@@ -205,7 +205,7 @@ Design principles:
 
 ## The verification gate
 
-The trap Sentinel-C guards against: the only judge of a fix is the same analyzer
+The trap Maisha guards against: the only judge of a fix is the same analyzer
 whose blind spot may have created the finding. "The warning stopped firing"
 rewards the syntactically minimal edit — often the one most likely to change
 behavior at a boundary. Casting a signed sentinel (`-1` = "no limit") to
@@ -229,18 +229,18 @@ resolve them. Every resolution records how it was confirmed (`analyzer`/`test`/
 `human`) and, for human sign-off, `approved_by`.
 
 ```bash
-sentinelc session begin src/ --verification-policy test_gated --test-command "make test"
+maishac session begin src/ --verification-policy test_gated --test-command "make test"
 # ...agent fixes, then:
-sentinelc session verify <id>          # -> awaiting_verification if fixes need sign-off
-sentinelc approve <fingerprint> --by lead@example.com
+maishac session verify <id>          # -> awaiting_verification if fixes need sign-off
+maishac approve <fingerprint> --by lead@example.com
 ```
 
 ## Teams & concurrency
 
-Project memory lives in a per-project SQLite file, `.sentinelc/memory.db`.
+Project memory lives in a per-project SQLite file, `.maishac/memory.db`.
 
 - **Gitignore it.** It is local, machine-specific state, not source — add
-  `.sentinelc/` to `.gitignore` (this repo already does). To share state
+  `.maishac/` to `.gitignore` (this repo already does). To share state
   deliberately, export a `compliance_report` (SARIF/JSON), don't commit the DB.
 - **Concurrent access.** The DB runs in WAL mode with a busy-timeout, so a CI
   scan and a local session can read/write without hard-blocking. `session begin`
@@ -259,5 +259,5 @@ useful as a demo target.
 ## License / disclaimer
 
 Rule summaries are original paraphrases; MISRA®, BARR-C and SEI CERT C are the
-property of their respective owners. Sentinel-C output does not constitute a
+property of their respective owners. Maisha output does not constitute a
 formal compliance certification.

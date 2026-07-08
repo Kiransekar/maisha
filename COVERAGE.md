@@ -8,7 +8,7 @@
 **This is a curated subset, and says so.** The full standards are far
 larger than what ships here — MISRA C:2012 has 180+ rules/directives and
 CERT C has hundreds of guidelines. The tables below list exactly the rules
-Sentinel-C carries fix guidance and cross-references for. A gap here is a
+Maisha carries fix guidance and cross-references for. A gap here is a
 known gap, which is the point: no silent "we cover MISRA" claim.
 
 **Analyzer columns** reflect what the code *maps*, not what an external

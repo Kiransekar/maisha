@@ -1,4 +1,4 @@
-"""Sentinel-C: agent harness for MISRA C, BARR-C and CERT C compliance.
+"""Maisha: agent harness for MISRA C, BARR-C and CERT C compliance.
 
 Architecture (all IDE-agnostic, exposed over MCP or CLI):
 

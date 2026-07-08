@@ -3,13 +3,13 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sentinel-c"
+name = "maishac"
 version = "0.1.0"
 description = "Agent harness for MISRA C, BARR-C and CERT C compliance: persistent memory, engineered fix loops, and an MCP server usable from any agentic IDE."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Sentinel-C contributors" }]
+authors = [{ name = "Maisha contributors" }]
 keywords = ["misra", "cert-c", "barr-c", "static-analysis", "mcp", "agent", "embedded"]
 dependencies = [
     "mcp>=1.2.0",
@@ -19,10 +19,10 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [project.scripts]
-sentinelc = "sentinelc.cli:main"
+maishac = "maishac.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["sentinelc*"]
+include = ["maishac*"]
 
 [tool.setuptools.package-data]
-"sentinelc.rules" = ["*.json"]
+"maishac.rules" = ["*.json"]

@@ -29,7 +29,7 @@ class RuleRegistry:
         self._by_standard: dict[str, list[str]] = {}
         for standard, fname in _FILES.items():
             data = json.loads(
-                resources.files("sentinelc.rules").joinpath(fname).read_text("utf-8")
+                resources.files("maishac.rules").joinpath(fname).read_text("utf-8")
             )
             ids = []
             for rid, meta in data["rules"].items():

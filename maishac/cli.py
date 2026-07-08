@@ -1,18 +1,18 @@
-"""Sentinel-C command line interface.
+"""Maisha command line interface.
 
-    sentinelc scan src/                     scan + sync memory
-    sentinelc findings --limit 20           list open findings
-    sentinelc rule "MISRA 21.3"             explain a rule
-    sentinelc session begin src/            start an engineered fix session
-    sentinelc session batch <id>            next prioritized batch (JSON)
-    sentinelc session verify <id>           rescan + converge check
-    sentinelc deviate "MISRA 21.6" -s "src/debug/*" -j "..."
-    sentinelc suppress <fingerprint> -r "false positive because ..."
-    sentinelc note "Use pool_alloc() instead of malloc" -t allocator
-    sentinelc report [--format markdown|json|sarif] [-o file]
-    sentinelc import findings.sarif         ingest an external engine's SARIF
-    sentinelc approve <fingerprint> --by me  human sign-off on a verified fix
-    sentinelc serve                         run the MCP server (stdio)
+    maishac scan src/                     scan + sync memory
+    maishac findings --limit 20           list open findings
+    maishac rule "MISRA 21.3"             explain a rule
+    maishac session begin src/            start an engineered fix session
+    maishac session batch <id>            next prioritized batch (JSON)
+    maishac session verify <id>           rescan + converge check
+    maishac deviate "MISRA 21.6" -s "src/debug/*" -j "..."
+    maishac suppress <fingerprint> -r "false positive because ..."
+    maishac note "Use pool_alloc() instead of malloc" -t allocator
+    maishac report [--format markdown|json|sarif] [-o file]
+    maishac import findings.sarif         ingest an external engine's SARIF
+    maishac approve <fingerprint> --by me  human sign-off on a verified fix
+    maishac serve                         run the MCP server (stdio)
 """
 
 from __future__ import annotations
@@ -139,7 +139,7 @@ def cmd_report(args):
 
 def cmd_serve(args):
     if getattr(args, "project", None):
-        os.environ["SENTINELC_PROJECT"] = str(Path(args.project).resolve())
+        os.environ["MAISHAC_PROJECT"] = str(Path(args.project).resolve())
     try:
         from .mcp_server import main as serve_main
     except ModuleNotFoundError as e:
@@ -148,7 +148,7 @@ def cmd_serve(args):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="sentinelc",
+    p = argparse.ArgumentParser(prog="maishac",
                                 description="Agent harness for MISRA C, BARR-C and CERT C.")
     p.add_argument("--project", "-p", help="Project root (default: cwd)")
     sub = p.add_subparsers(dest="cmd", required=True)
