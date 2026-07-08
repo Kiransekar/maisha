@@ -7,14 +7,101 @@ IDE problem panes.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import time
 from pathlib import Path
 
+from .analyzers.cppcheck import CPPCHECK_TO_CERT
 from .memory import MemoryStore
+from .model import Finding, compute_fingerprint, relpath
 from .rules import REGISTRY
 
 _STANDARDS = ["MISRA-C:2012", "BARR-C:2018", "CERT-C"]
+
+# SARIF result.level -> unified severity (used only when the rule isn't one we
+# recognize; recognized rules take severity from the knowledge base).
+_LEVEL_SEV = {"error": "critical", "warning": "major", "note": "minor", "none": "info"}
+_SARIF_MISRA = re.compile(r"misra[_-]c?[-_]?2012[-_](\d+\.\d+)", re.I)
+_SARIF_CERT = re.compile(r"\b([A-Z]{3}\d{2}-C)\b", re.I)
+
+
+def _resolve_sarif_rule(rule_id: str) -> dict | None:
+    """Best-effort map of a foreign SARIF ruleId onto a Sentinel-C rule.
+    Handles Sentinel-C's own ids, MISRA (misra-c2012-21.3), CERT (cert-err34-c
+    or ERR34-C) and cppcheck semantic ids (nullPointer -> EXP34-C)."""
+    meta = REGISTRY.get(rule_id) or REGISTRY.resolve(rule_id)
+    if meta:
+        return meta
+    m = _SARIF_MISRA.search(rule_id)
+    if m:
+        return REGISTRY.resolve(f"MISRA {m.group(1)}")
+    m = _SARIF_CERT.search(rule_id)
+    if m:
+        return REGISTRY.resolve(f"CERT {m.group(1).upper()}")
+    if rule_id in CPPCHECK_TO_CERT:
+        return REGISTRY.resolve(f"CERT {CPPCHECK_TO_CERT[rule_id]}")
+    return None
+
+
+def parse_sarif(data: dict, root: Path) -> list[Finding]:
+    """Parse SARIF 2.1.0 results into Findings. Reuses Sentinel-C fingerprints
+    from partialFingerprints when present (so its own export round-trips)."""
+    findings: list[Finding] = []
+    for run in data.get("runs", []):
+        driver = (run.get("tool") or {}).get("driver") or {}
+        tool = (driver.get("name") or "sarif").lower()
+        for res in run.get("results", []):
+            rid_raw = res.get("ruleId") or ""
+            loc = ((res.get("locations") or [{}])[0].get("physicalLocation") or {})
+            uri = (loc.get("artifactLocation") or {}).get("uri") or ""
+            region = loc.get("region") or {}
+            line = int(region.get("startLine") or 0)
+            col = int(region.get("startColumn") or 0)
+            snippet = (region.get("snippet") or {}).get("text") or ""
+            msg = (res.get("message") or {}).get("text") or ""
+            level = res.get("level") or "warning"
+
+            meta = _resolve_sarif_rule(rid_raw)
+            if meta:
+                rid, standard = meta["id"], meta["standard"]
+                severity = meta.get("severity", _LEVEL_SEV.get(level, "major"))
+                fix = meta.get("fix", "")
+            else:
+                rid, standard = f"sarif:{rid_raw}" if rid_raw else "sarif:unknown", "generic"
+                severity, fix = _LEVEL_SEV.get(level, "major"), ""
+
+            line_content = snippet.strip()
+            if not line_content and uri and line:
+                line_content = _read_line(root / uri, line)
+
+            fp = (res.get("partialFingerprints") or {}).get("sentinelc/v1")
+            if not fp:
+                if line_content:
+                    fp = compute_fingerprint(rid, relpath(root / uri, root), line_content)
+                else:
+                    # ponytail: no source line to anchor to — fall back to a
+                    # location+message hash. Not line-stable, but external SARIF
+                    # is re-imported wholesale, so identity only needs to be
+                    # unique within one import. Upgrade: fetch the source line.
+                    fp = hashlib.sha1(
+                        f"{rid}\x1f{uri}\x1f{line}\x1f{col}\x1f{msg}".encode("utf-8", "replace")
+                    ).hexdigest()[:16]
+
+            findings.append(Finding(
+                rule_id=rid, standard=standard, severity=severity, file=uri, line=line,
+                column=col, message=msg, analyzer=f"sarif:{tool}",
+                line_content=line_content, fix_hint=fix, fingerprint=fp))
+    return findings
+
+
+def _read_line(path: Path, line: int) -> str:
+    try:
+        lines = path.read_text("utf-8", errors="replace").splitlines()
+        return lines[line - 1].strip() if 0 < line <= len(lines) else ""
+    except OSError:
+        return ""
 
 
 def compliance_matrix(mem: MemoryStore) -> dict:

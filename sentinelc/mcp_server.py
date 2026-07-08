@@ -213,6 +213,21 @@ def compliance_session_status(session_id: str) -> str:
 
 
 @mcp.tool()
+def compliance_import_sarif(path: str) -> str:
+    """Import findings from an external SARIF 2.1.0 file into project memory, so
+    a qualified/certified engine's output (Helix QAC, Polyspace, Parasoft,
+    IAR C-STAT, or cppcheck's own --sarif) gets the same loop, memory, gate and
+    deviation treatment as a native scan. Recognized MISRA/CERT ruleIds map onto
+    the knowledge base; others are kept as `sarif:<ruleId>`. Imported findings
+    are NOT cleared by native rescans.
+
+    Args:
+        path: Path to the SARIF file (relative to the project root or absolute).
+    """
+    return _j(_engine().import_sarif(path))
+
+
+@mcp.tool()
 def compliance_approve_finding(fingerprint: str, approved_by: str) -> str:
     """Human sign-off that a fix is genuinely correct, moving a finding from
     pending_verification to resolved. Required for high-severity and

@@ -139,7 +139,7 @@ class MemoryStore:
 
     # ------------------------------------------------------------ scan sync
     def sync_scan(self, findings: list[Finding], scanned_files: list[str],
-                  gate: bool = False) -> dict:
+                  gate: bool = False, producers: set[str] | None = None) -> dict:
         """Reconcile a fresh scan against memory.
 
         Returns a diff: {new, persisting, resolved, pending, regressed, suppressed,
@@ -151,6 +151,11 @@ class MemoryStore:
         judge of the fix so far is the same analyzer whose blind spots may have
         created the finding — a passing test run or a human must confirm it
         before it counts as resolved (see engine verification_policy).
+
+        ``producers`` names the analyzers that ran this scan. A known finding
+        absent from the scan is only cleared if one of *its* producers ran —
+        so a native rescan never resolves findings imported from a qualified
+        engine via SARIF. None = clear any absent finding (legacy behavior).
         """
         now = time.time()
         current = {f.fingerprint: f for f in findings}
@@ -200,6 +205,9 @@ class MemoryStore:
         for fp, prev in known.items():
             if fp in current:
                 continue
+            if producers is not None and not any(
+                    a in producers for a in (prev["analyzer"] or "").split("+")):
+                continue  # this finding's analyzer didn't run — can't judge it cleared
             if prev["status"] in ("open", "regressed") and prev["file"] in scanned:
                 if gate:
                     self.db.execute(

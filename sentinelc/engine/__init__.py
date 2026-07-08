@@ -78,7 +78,7 @@ class LoopEngine:
         from ..analyzers.base import collect_c_files
         scanned = [str(f.resolve().relative_to(self.root)) if str(f).startswith(str(self.root))
                    else str(f) for f in collect_c_files(paths, self.root)]
-        diff = self.mem.sync_scan(findings, scanned, gate=gate)
+        diff = self.mem.sync_scan(findings, scanned, gate=gate, producers=set(used))
         return {
             "analyzers_used": used,
             "files_scanned": len(scanned),
@@ -86,6 +86,25 @@ class LoopEngine:
             "diff": {k: len(v) for k, v in diff.items()},
             "open": len(self.mem.open_findings(limit=100000)),
             "pending_verification": self.mem.count_pending(),
+        }
+
+    def import_sarif(self, path: str | Path) -> dict:
+        """Ingest findings from an external SARIF file (e.g. a qualified engine
+        like Helix QAC / Polyspace, or cppcheck's own --sarif output) into the
+        same memory/loop/gate machinery as a native scan. Imported findings are
+        not cleared by native rescans (see sync_scan producers)."""
+        from .. import report as report_mod
+        import json
+        data = json.loads(Path(path).read_text("utf-8"))
+        findings = report_mod.parse_sarif(data, self.root)
+        diff = self.mem.sync_scan(findings, [], producers=set())
+        tools = sorted({f.analyzer for f in findings})
+        return {
+            "source": str(path),
+            "tools": tools,
+            "imported": len(findings),
+            "diff": {k: len(v) for k, v in diff.items()},
+            "open": len(self.mem.open_findings(limit=100000)),
         }
 
     @staticmethod

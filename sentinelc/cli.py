@@ -10,6 +10,8 @@
     sentinelc suppress <fingerprint> -r "false positive because ..."
     sentinelc note "Use pool_alloc() instead of malloc" -t allocator
     sentinelc report [--format markdown|json|sarif] [-o file]
+    sentinelc import findings.sarif         ingest an external engine's SARIF
+    sentinelc approve <fingerprint> --by me  human sign-off on a verified fix
     sentinelc serve                         run the MCP server (stdio)
 """
 
@@ -87,6 +89,14 @@ def cmd_session(args):
 def cmd_approve(args):
     eng = _engine(args)
     _print(eng.approve(args.fingerprint, args.by))
+
+
+def cmd_import(args):
+    eng = _engine(args)
+    if args.format != "sarif":
+        print(f"Unsupported import format '{args.format}' (only 'sarif').", file=sys.stderr)
+        sys.exit(1)
+    _print(eng.import_sarif(args.file))
 
 
 def cmd_deviate(args):
@@ -175,6 +185,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("fingerprint")
     s.add_argument("--by", required=True, help="Who is signing off (recorded in the audit trail).")
     s.set_defaults(fn=cmd_approve)
+
+    s = sub.add_parser("import", help="Import findings from an external SARIF file")
+    s.add_argument("file")
+    s.add_argument("--format", choices=["sarif"], default="sarif")
+    s.set_defaults(fn=cmd_import)
 
     s = sub.add_parser("deviate", help="Record a formal rule deviation")
     s.add_argument("rule")

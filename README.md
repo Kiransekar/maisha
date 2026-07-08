@@ -71,8 +71,10 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
 **Recommended use for certification pipelines:** run Sentinel-C's loop for early,
 agent-driven cleanup, then hand off to a qualified engine (Astrée, Polyspace,
 Helix QAC, Parasoft C/C++test, IAR C-STAT) for the evidence an auditor accepts.
-SARIF interchange to layer Sentinel-C's loop/memory on top of those engines is on
-the roadmap.
+Those engines emit SARIF, and `sentinelc import findings.sarif` layers Sentinel-C's
+loop, memory, verification gate and deviation register on top of their findings —
+recognized MISRA/CERT ruleIds map onto the knowledge base, and imported findings
+are never cleared by a native rescan.
 
 ---
 
@@ -166,6 +168,7 @@ The recommended agent protocol is documented in
 | `compliance_add_deviation` | MISRA-style deviation record (justification ≥ 15 chars enforced) |
 | `compliance_suppress_finding` | Mark a fingerprint as false positive (reason required) |
 | `memory_note` / `memory_search` / `memory_stats` | Project convention memory |
+| `compliance_import_sarif` | Ingest an external engine's SARIF (qualified engine or cppcheck `--output-format=sarif`) into the same loop/memory/gate |
 | `compliance_report` | Markdown, JSON or SARIF 2.1.0 |
 
 ## Architecture

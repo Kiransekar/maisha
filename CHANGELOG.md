@@ -6,6 +6,13 @@ All notable changes to Sentinel-C are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **SARIF import.** `sentinelc import findings.sarif` (and MCP
+  `compliance_import_sarif`) ingests any SARIF 2.1.0 engine's findings — a
+  qualified engine (Helix QAC, Polyspace, Parasoft, IAR C-STAT) or cppcheck's
+  own `--output-format=sarif` — into the same loop/memory/gate. Recognized
+  MISRA/CERT ruleIds map onto the knowledge base; others are kept as
+  `sarif:<ruleId>`. Imported findings are scoped by producer so a native rescan
+  never silently clears them.
 - **Verification gate.** A fix is no longer marked `resolved` just because the
   analyzer stopped flagging it. Findings enter `pending_verification` and leave
   only via a session `verification_policy`: `analyzer_only`, `test_gated` (a
