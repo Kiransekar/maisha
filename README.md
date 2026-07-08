@@ -6,6 +6,11 @@
 
 **An agent harness for MISRA C:2012, BARR-C:2018 and CERT C compliance — usable from any agentic IDE.**
 
+> *Maisha* is Swahili for **"life."** Compliance standards like MISRA and CERT C
+> exist because this is the software that flies planes, drives cars and runs
+> medical devices — code where a defect costs lives, not uptime. The name is the
+> goal the tool works toward. The CLI and package are `maishac` (*Maisha-for-C*).
+
 > ⚠️ **Maisha is a workflow orchestrator and audit-trail layer, not a qualified/certified static-analysis tool.** Its findings do **not** by themselves satisfy tool-qualification requirements for DO-178C, ISO 26262 or IEC 62304, and running it is not a formal compliance certification. It is best used *upstream* of a qualified engine (see [Scope & Limitations](#scope--limitations)).
 
 Maisha is not another linter. It is the *deterministic half* of an autonomous
