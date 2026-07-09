@@ -48,7 +48,8 @@ def _j(obj) -> str:
 
 # ------------------------------------------------------------------ scanning
 @mcp.tool()
-def compliance_scan(paths: list[str], analyzers: list[str] | None = None) -> str:
+def compliance_scan(paths: list[str], analyzers: list[str] | None = None,
+                    include_paths: list[str] | None = None) -> str:
     """Scan C files/directories for MISRA C, BARR-C and CERT C violations and
     sync results into persistent project memory.
 
@@ -56,11 +57,15 @@ def compliance_scan(paths: list[str], analyzers: list[str] | None = None) -> str
         paths: Files or directories, relative to the project root (e.g. ["src"]).
         analyzers: Optional subset of ["native", "cppcheck", "clang-tidy"].
             Default: every analyzer installed on this machine.
+        include_paths: Header search dirs forwarded to cppcheck/clang-tidy as -I.
+            Without these, headers outside `paths` (e.g. a project's config.h)
+            are invisible to those analyzers and they misreport "undefined
+            identifier"/"file not found" false positives instead of real defects.
 
     Returns JSON with counts and a memory diff (new/persisting/resolved/
     regressed/suppressed/deviated). Use compliance_list_findings to see details.
     """
-    return _j(_engine().scan(paths, analyzers))
+    return _j(_engine().scan(paths, analyzers, include_paths=include_paths))
 
 
 @mcp.tool()
@@ -134,7 +139,8 @@ def compliance_begin_session(paths: list[str], max_iterations: int = 10,
                              severity_floor: str = "minor",
                              verification_policy: str | None = None,
                              test_command: str | None = None,
-                             force: bool = False) -> str:
+                             force: bool = False,
+                             include_paths: list[str] | None = None) -> str:
     """Start an engineered fix session: runs a baseline scan and opens a loop
     with budgets, stall detection and oscillation guards.
 
@@ -155,13 +161,17 @@ def compliance_begin_session(paths: list[str], max_iterations: int = 10,
             (casts/comparisons/conversions) still require human approval.
         force: Start a new session even if one is already active on this project
             (otherwise begin returns the active session id so you can resume it).
+        include_paths: Header search dirs forwarded to cppcheck/clang-tidy as -I
+            on every scan/verify in this session. Without these, headers outside
+            `paths` are invisible to those analyzers and they misreport
+            "undefined identifier"/"file not found" false positives.
 
     Follow with compliance_next_batch.
     """
     return _j(_engine().begin_session(paths, {
         "max_iterations": max_iterations, "batch_size": batch_size,
         "severity_floor": severity_floor, "verification_policy": verification_policy,
-        "test_command": test_command}, force=force))
+        "test_command": test_command, "include_paths": include_paths}, force=force))
 
 
 @mcp.tool()

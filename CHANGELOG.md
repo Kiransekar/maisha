@@ -5,6 +5,30 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+- **The three bugs the FreeRTOS benchmark run surfaced (§8 follow-up).**
+  - `maishac scan`/`session begin` now accept `--include`/`-I` (repeatable;
+    MCP: `include_paths`), forwarded as `-I<path>` to cppcheck and clang-tidy.
+    Previously there was no way to give either analyzer the project's own
+    header search path, which was the root cause of 94 of the 132 confirmed
+    false positives in the FreeRTOS run (missing-declaration/undefined-macro
+    noise and clang-tidy never parsing a file at all).
+  - `enclosing_function()` (`model.py`) is now brace-nesting-aware: it walks
+    upward tracking block depth so it finds the function that actually
+    encloses a line, skipping over control-flow blocks (if/for/while/switch)
+    instead of matching the first line anywhere above that merely looks like
+    a header. It also reconstructs signatures split across multiple lines
+    (common with long parameter lists). This fixes the MISRA 17.2 (recursion)
+    false positive where a call from inside a function with a multi-line
+    signature was mis-attributed to an unrelated earlier function of the same
+    name as the callee.
+  - The native MISRA 15.6 (braceless control-statement body) check no longer
+    mistakes a `#if`/`#else`/`#endif` sitting between a control header and its
+    body for a missing brace — it now looks past preprocessor/blank lines to
+    the real next line before judging. All 16 FreeRTOS hits for this rule
+    were this exact pattern.
+  - Regression tests for all three: `tests/test_benchmark_fixes.py`.
+
 ### Added
 - **Benchmark run (§8).** `BENCHMARKS.md` — Maisha scanned the FreeRTOS kernel
   (16,914 LOC, 7 core files), 1,757 findings, with a manually-verified

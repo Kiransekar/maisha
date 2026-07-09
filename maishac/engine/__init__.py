@@ -54,6 +54,7 @@ DEFAULT_CONFIG = {
     # None => auto: test_gated if test_command is set, else human_gated.
     "verification_policy": None,
     "test_command": None,       # shell command; exit 0 confirms pending fixes
+    "include_paths": None,      # -I dirs forwarded to cppcheck/clang-tidy
 }
 
 _VALID_POLICIES = ("analyzer_only", "test_gated", "human_gated")
@@ -73,8 +74,8 @@ class LoopEngine:
 
     # ------------------------------------------------------------------ scan
     def scan(self, paths: list[str], analyzers: list[str] | None = None,
-             gate: bool = False) -> dict:
-        findings, used = run_scan(paths, self.root, analyzers)
+             gate: bool = False, include_paths: list[str] | None = None) -> dict:
+        findings, used = run_scan(paths, self.root, analyzers, include_paths)
         from ..analyzers.base import collect_c_files
         scanned = [str(f.resolve().relative_to(self.root)) if str(f).startswith(str(self.root))
                    else str(f) for f in collect_c_files(paths, self.root)]
@@ -142,7 +143,7 @@ class LoopEngine:
                              f"({existing['id']}). Resume it (session_status/next_batch), "
                              "or pass force to start a fresh one anyway.",
                     "active_session_id": existing["id"]}
-        baseline = self.scan(paths, cfg.get("analyzers"))
+        baseline = self.scan(paths, cfg.get("analyzers"), include_paths=cfg.get("include_paths"))
         sid = self.mem.create_session(cfg)
         self.mem.update_session(sid, history=[{
             "iteration": 0, "event": "baseline",
@@ -208,7 +209,8 @@ class LoopEngine:
         sess = self._require(session_id)
         cfg = sess["config"]
         policy = self._policy(cfg)
-        result = self.scan(cfg["paths"], cfg.get("analyzers"), gate=policy != "analyzer_only")
+        result = self.scan(cfg["paths"], cfg.get("analyzers"), gate=policy != "analyzer_only",
+                          include_paths=cfg.get("include_paths"))
         iteration = sess["iteration"] + 1
         history = sess["history"]
         prev_open = history[-1]["open"] if history else result["open"]

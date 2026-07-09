@@ -86,14 +86,61 @@ class Finding:
         return Finding(**{k: v for k, v in d.items() if k in known})
 
 
+_CTRL_LEAD_RE = re.compile(r"^\s*(if|for|while|switch|else|do)\b")
+_SIG_TAIL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\([^;{}]*\)\s*$")
+
+
+def _reconstruct_header(lines: list[str], brace_line_idx: int) -> str:
+    """A block's opening '{' identifies *that* brace's owner, but the header
+    itself may live on earlier lines — either sharing the brace's line
+    ("void f(void) {") or, for long parameter lists, spread across several
+    lines with the brace alone on its own line (common Allman-style embedded
+    C). Reconstruct the header text by pulling in lines until the parens
+    balance, so it can be told apart from a control statement's header."""
+    head = lines[brace_line_idx].split("{", 1)[0].strip()
+    collected: list[str] = [head] if head else []
+    j = brace_line_idx - 1
+    if not head:
+        while j >= 0 and not lines[j].strip():
+            j -= 1
+        if j < 0:
+            return ""
+        collected = [lines[j].strip()]
+        j -= 1
+    balance = collected[0].count(")") - collected[0].count("(")
+    while balance > 0 and j >= 0:
+        s = lines[j].strip()
+        if not s:
+            j -= 1
+            continue
+        if s.endswith((";", "{", "}")):
+            break
+        collected.insert(0, s)
+        balance += s.count(")") - s.count("(")
+        j -= 1
+    return " ".join(collected).strip()
+
+
 def enclosing_function(lines: list[str], idx: int) -> str:
-    """Cheap heuristic: walk upward for something that looks like a function
-    definition header. Good enough for fingerprint context."""
-    sig = re.compile(r"^[A-Za-z_][\w\s\*]*\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{?\s*$")
-    for i in range(idx, -1, -1):
-        m = sig.match(lines[i].strip())
-        if m and lines[i].strip() and not lines[i].lstrip().startswith(("if", "for", "while", "switch", "return", "else")):
-            return m.group(1)
+    """Heuristic: walk upward tracking brace nesting to find the *innermost*
+    block that actually encloses idx, skipping over control-flow blocks
+    (if/for/while/switch/do) rather than matching the first line anywhere
+    above that merely looks like a function header. Also reconstructs headers
+    split across multiple lines. Good enough for fingerprint context."""
+    balance = 0
+    i = idx
+    while i >= 0:
+        balance += lines[i].count("}") - lines[i].count("{")
+        if balance < 0:
+            header = _reconstruct_header(lines, i)
+            if header and not _CTRL_LEAD_RE.match(header):
+                m = _SIG_TAIL_RE.search(header)
+                if m:
+                    return m.group(1)
+            # not a function header (a control block, or unrecognized) —
+            # treat this level as matched and keep looking for the next one up.
+            balance = 0
+        i -= 1
     return ""
 
 

@@ -102,13 +102,29 @@ _FLOAT_EQ_RE = re.compile(r"\b(float|double)\b")
 _FUNC_DEF_RE = re.compile(r"^\s*(?:static\s+|inline\s+|extern\s+)*[A-Za-z_][\w\s\*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{?\s*$")
 _BASIC_TYPE_DECL_RE = re.compile(r"^\s*(?:static\s+|const\s+|volatile\s+|extern\s+)*(?:unsigned\s+|signed\s+)?(int|short|long)\b(?!\s*\()")
 _COMMENTED_CODE_RE = re.compile(r"(;|\{|\}|\breturn\b|=)")
+_PREPROC_RE = re.compile(r"^\s*#")
+
+
+def _next_significant(lines: list[str], start_idx: int) -> str | None:
+    """First line at/after start_idx (0-based) that isn't blank or a
+    preprocessor directive. A #if/#ifdef/#else/#endif conditional-compilation
+    block sitting between a control header and its body is not a missing
+    brace — it's the body wrapped in a compile-time choice, and the real
+    brace is on the far side of it (see BENCHMARKS.md: 16/16 confirmed cases
+    of this exact pattern in FreeRTOS)."""
+    j = start_idx
+    while j < len(lines) and (not lines[j].strip() or _PREPROC_RE.match(lines[j])):
+        j += 1
+    return lines[j] if j < len(lines) else None
 
 
 class NativeAnalyzer(Analyzer):
     name = "native"
     requires = None
 
-    def analyze(self, files: list[Path], root: Path) -> list[Finding]:
+    def analyze(self, files: list[Path], root: Path,
+                include_paths: list[str] | None = None) -> list[Finding]:
+        # lexical checks need no compilation model, so include paths don't apply here
         findings: list[Finding] = []
         for f in files:
             try:
@@ -159,13 +175,13 @@ class NativeAnalyzer(Analyzer):
                 add("MISRA 13.4", i, "assignment used inside a condition expression")
             if _NOBRACE_RE.match(line) or _ELSE_NOBRACE_RE.match(line):
                 add("MISRA 15.6", i, "control statement body is not a compound (braced) block")
-            # header on one line, braceless body on the next
-            if i > 1:
-                prev = clean_lines[i - 2]
-                if (_CTRL_HDR_RE.match(prev) or _ELSE_HDR_RE.match(prev)) and line.strip() \
-                        and not line.lstrip().startswith("{") \
-                        and not _CTRL_HDR_RE.match(line) and not _ELSE_HDR_RE.match(line):
-                    add("MISRA 15.6", i - 1,
+            # header on one line, braceless body on the next — skip over any
+            # #if/#else/#endif between the header and its real body first.
+            if _CTRL_HDR_RE.match(line) or _ELSE_HDR_RE.match(line):
+                nxt = _next_significant(clean_lines, i)  # clean_lines[i] is the line after `line` (0-based)
+                if nxt is not None and not nxt.lstrip().startswith("{") \
+                        and not _CTRL_HDR_RE.match(nxt) and not _ELSE_HDR_RE.match(nxt):
+                    add("MISRA 15.6", i,
                         "control statement body is not a compound (braced) block")
             if _GOTO_RE.search(line):
                 add("MISRA 15.1", i, "goto statement")

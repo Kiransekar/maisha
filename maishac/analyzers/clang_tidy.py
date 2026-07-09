@@ -24,15 +24,19 @@ class ClangTidyAnalyzer(Analyzer):
     name = "clang-tidy"
     requires = "clang-tidy"
 
-    def analyze(self, files: list[Path], root: Path) -> list[Finding]:
+    def analyze(self, files: list[Path], root: Path,
+                include_paths: list[str] | None = None) -> list[Finding]:
         if not files:
             return []
         c_files = [f for f in files if f.suffix == ".c"]
         if not c_files:
             return []
+        # Without include dirs, clang-tidy can't find project headers ("file not
+        # found") and never parses the file at all — see BENCHMARKS.md.
+        include_flags = [f"-I{p}" for p in (include_paths or [])]
         cmd = ["clang-tidy", "--quiet",
                "--checks=-*,cert-*,bugprone-*,clang-analyzer-*"] \
-              + [str(f) for f in c_files] + ["--", "-std=c11"]
+              + [str(f) for f in c_files] + ["--", "-std=c11"] + include_flags
         try:
             proc = self._run(cmd, timeout=600)
         except Exception:

@@ -38,7 +38,8 @@ def _print(obj) -> None:
 
 def cmd_scan(args):
     eng = _engine(args)
-    _print(eng.scan(args.paths, args.analyzers.split(",") if args.analyzers else None))
+    _print(eng.scan(args.paths, args.analyzers.split(",") if args.analyzers else None,
+                    include_paths=args.include))
 
 
 def cmd_findings(args):
@@ -77,7 +78,8 @@ def cmd_session(args):
         _print(eng.begin_session(args.paths, {
             "max_iterations": args.max_iterations, "batch_size": args.batch_size,
             "verification_policy": args.verification_policy,
-            "test_command": args.test_command}, force=args.force))
+            "test_command": args.test_command,
+            "include_paths": args.include}, force=args.force))
     elif args.action == "batch":
         _print(eng.next_batch(args.session_id))
     elif args.action == "verify":
@@ -156,6 +158,10 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("scan", help="Scan paths and sync memory")
     s.add_argument("paths", nargs="+")
     s.add_argument("--analyzers", help="Comma list: native,cppcheck,clang-tidy")
+    s.add_argument("--include", "-I", action="append",
+                   help="Include dir forwarded to cppcheck/clang-tidy as -I "
+                        "(repeatable). Without these, headers outside the "
+                        "scanned paths cause misconfiguration false positives.")
     s.set_defaults(fn=cmd_scan)
 
     s = sub.add_parser("findings", help="List open findings")
@@ -181,6 +187,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Shell command that must exit 0 to confirm fixes (e.g. 'make test').")
     s.add_argument("--force", action="store_true",
                    help="Start a new session even if one is already active on this project.")
+    s.add_argument("--include", "-I", action="append",
+                   help="Include dir forwarded to cppcheck/clang-tidy as -I "
+                        "(repeatable). Without these, headers outside the "
+                        "scanned paths cause misconfiguration false positives.")
     s.set_defaults(fn=cmd_session)
 
     s = sub.add_parser("approve", help="Approve a pending_verification finding as resolved")

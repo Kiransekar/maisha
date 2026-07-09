@@ -86,6 +86,16 @@ concrete, fixable issues, all reproduced above:
    `#if/#else/#endif` between an `if` header and its `{` defeats the "next line is a
    brace?" heuristic. All 16 hits were this single pattern.
 
+**Status: all three fixed** (see CHANGELOG.md "Unreleased"). `scan`/`session
+begin` now take `--include`/`-I` to forward header search paths to
+cppcheck/clang-tidy; `enclosing_function()` is brace-nesting-aware and handles
+multi-line signatures, fixing the 17.2 false positive; the native 15.6 check
+now looks past `#if`/`#else`/`#endif` to the real next line. Regression tests
+reproducing each bug are in `tests/test_benchmark_fixes.py`. The numbers above
+are from the original run and have not been re-measured post-fix — a rerun
+with `--include` pointed at FreeRTOS's config/portable headers would be the
+natural next benchmark.
+
 ## Not measured: loop convergence
 
 The improvement backlog also asks for iterations-to-convergence and

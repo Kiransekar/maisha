@@ -44,7 +44,8 @@ class Analyzer(ABC):
         return self.requires is None or shutil.which(self.requires) is not None
 
     @abstractmethod
-    def analyze(self, files: list[Path], root: Path) -> list[Finding]:
+    def analyze(self, files: list[Path], root: Path,
+                include_paths: list[str] | None = None) -> list[Finding]:
         ...
 
     @staticmethod

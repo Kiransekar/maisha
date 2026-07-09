@@ -43,12 +43,19 @@ class CppcheckAnalyzer(Analyzer):
     name = "cppcheck"
     requires = "cppcheck"
 
-    def analyze(self, files: list[Path], root: Path) -> list[Finding]:
+    def analyze(self, files: list[Path], root: Path,
+                include_paths: list[str] | None = None) -> list[Finding]:
         if not files:
             return []
+        # Without the project's own include dirs, cppcheck can't see headers like
+        # FreeRTOSConfig.h, so it misreports "undefined identifier"/"unresolved
+        # declaration" on macros and functions that are perfectly visible to a
+        # real build — see BENCHMARKS.md for the measured false-positive cost.
+        include_flags = [f"-I{p}" for p in (include_paths or [])]
         cmd = ["cppcheck", "--enable=all", "--inline-suppr", "--xml",
                "--suppress=missingIncludeSystem", "--suppress=unusedFunction",
-               "--suppress=checkersReport", "--addon=misra"] + [str(f) for f in files]
+               "--suppress=checkersReport", "--addon=misra"] \
+              + include_flags + [str(f) for f in files]
         try:
             proc = self._run(cmd)
         except Exception:

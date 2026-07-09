@@ -25,8 +25,14 @@ def available_analyzers(only: list[str] | None = None) -> list[Analyzer]:
 
 
 def run_scan(paths: list[str], root: Path,
-             analyzers: list[str] | None = None) -> tuple[list[Finding], list[str]]:
+             analyzers: list[str] | None = None,
+             include_paths: list[str] | None = None) -> tuple[list[Finding], list[str]]:
     """Run all (or the named) available analyzers over paths.
+
+    include_paths are forwarded to analyzers that compile/parse (cppcheck,
+    clang-tidy) as -I flags — without them, headers outside the scanned paths
+    (e.g. a project's FreeRTOSConfig.h) are invisible and those analyzers
+    misreport "undefined"/"file not found" false positives (see BENCHMARKS.md).
 
     Returns (deduped findings sorted by severity/file/line, analyzer names used).
     Dedup rule: fingerprint collision keeps the first occurrence but records the
@@ -38,7 +44,7 @@ def run_scan(paths: list[str], root: Path,
     used = []
     for an in active:
         used.append(an.name)
-        for fnd in an.analyze(files, root):
+        for fnd in an.analyze(files, root, include_paths):
             key = fnd.fingerprint
             if key in merged:
                 prior = merged[key]
