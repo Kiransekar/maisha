@@ -13,6 +13,16 @@ def test_every_pattern_rule_reference_resolves():
             assert REGISTRY.resolve(ref), f"{p['concern']}: unresolved rule '{ref}'"
 
 
+def test_every_kb_rule_has_a_compliant_pattern():
+    """Full coverage: each of the 81 KB rules maps to at least one authoring
+    idiom, so guidance/check can teach a fix for anything the harness knows.
+    If a rule is added to the KB without a pattern, this fails."""
+    patterns._BY_RULE = None  # rebuild index
+    covered = set(patterns._index())
+    missing = [r for r in REGISTRY.all_ids() if r not in covered]
+    assert not missing, f"KB rules with no authoring pattern: {missing}"
+
+
 def test_guidance_finds_idioms_by_topic():
     g = patterns.guidance("dynamic memory")
     assert g and g[0]["concern"] == "dynamic memory allocation"

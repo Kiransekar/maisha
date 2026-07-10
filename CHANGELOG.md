@@ -6,17 +6,23 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
-- **Author-time compliant-pattern library (Mode 1)** — a curated set of
-  recurring embedded-C authoring concerns (`maishac/patterns.py`: dynamic
-  memory, fixed-width types, recursion, checked returns, string buffers,
-  string→number, control-flow braces, switch default, boolean/assignment
-  conditions, null checks, integer conversion/overflow, format strings, bounded
-  loops, goto), each cross-linked to the MISRA/CERT/BARR-C rules it satisfies.
-  Exposed proactively via `compliance_guidance` (MCP) / `maishac guide "<topic>"`
-  (CLI) — get the idiom to *prefer*, the anti-pattern to *avoid*, and *why*,
-  before writing code — and attached to `check_snippet` findings so the reactive
-  path also shows the compliant idiom to swap in. New `AUTHORING_PLAYBOOK.md`
-  documents the guidance → draft → check → rewrite loop for an IDE agent.
+- **Author-time compliant-pattern library (Mode 1)** — 37 recurring embedded-C
+  authoring concerns (`maishac/patterns.py`: dynamic memory & free discipline,
+  fixed-width types, recursion, checked returns, string buffers, string→number,
+  control-flow braces, switch default, boolean/assignment conditions, null
+  checks, integer conversion/overflow, division-by-zero, floating-point, EOF
+  handling, PRNG seeding, unsafe macros, reserved identifiers, static linkage,
+  visible declarations, numeric/lexical literals, macro naming, command
+  processors, signal handlers, non-local jumps, variadic functions, date/time,
+  stdlib sort/search, reentrancy, dead code, formatting hygiene, VLAs, pointer
+  punning, bounded loops, goto/single-exit), each cross-linked to the
+  MISRA/CERT/BARR-C rules it satisfies. **Covers all 81 KB rules** — a test
+  fails if a rule is ever added without an idiom. Exposed proactively via
+  `compliance_guidance` (MCP) / `maishac guide "<topic>"` (CLI) — get the idiom
+  to *prefer*, the anti-pattern to *avoid*, and *why*, before writing code — and
+  attached to `check_snippet` findings so the reactive path also shows the
+  compliant idiom to swap in. New `AUTHORING_PLAYBOOK.md` documents the
+  guidance → draft → check → rewrite loop for an IDE agent.
 - **Proactive authoring aid** — `compliance_check_snippet` MCP tool and
   `maishac check <file|->` CLI lint a draft C snippet *in memory, before it is
   written to a file*, returning violations + fix hints so an agent writes the
