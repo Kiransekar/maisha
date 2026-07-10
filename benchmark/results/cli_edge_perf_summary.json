@@ -1,0 +1,9 @@
+{
+  "failures": [],
+  "performance": {
+    "lines": 12288,
+    "size_kb": 206.8427734375,
+    "elapsed_s": 0.43800000000010186,
+    "findings": 572
+  }
+}

@@ -151,11 +151,11 @@ def markdown_report(mem: MemoryStore, project_name: str = "") -> str:
             f"| {std} | {m['rules_checked']} | {m['open_findings']} | "
             f"{m['pending_verification']} | {m['resolved_findings']} | "
             f"{', '.join(m['rules_violated']) or '—'} | {', '.join(m['rules_deviated']) or '—'} | "
-            f"{'✅' if m['clean'] else '❌'} |")
+            f"{'yes' if m['clean'] else 'no'} |")
     lines += ["", "## Open findings", ""]
     opens = mem.open_findings(limit=500)
     if not opens:
-        lines.append("None. 🎉")
+        lines.append("None.")
     for f in opens:
         lines.append(f"- **{f['rule_id']}** ({f['severity']}, {f['status']}) "
                      f"`{f['file']}:{f['line']}` — {f['message']}")

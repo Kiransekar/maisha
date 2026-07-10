@@ -1,0 +1,144 @@
+
+==============================================================================
+SESSION 1 — verification gate + convergence (test_gated policy)
+==============================================================================
+Baseline scan: 24 findings, 24 open, analyzers=['native', 'cppcheck', 'clang-tidy']
+Suppressed false positive: CERT STR31-C in fw_types.h (5934d187ffb313af)
+Suppressed false positive: MISRA 18.8 in uart_driver.c (72316fb0a09b6b09)
+
+begin_session -> b7490adc792f, policy=['native', 'cppcheck', 'clang-tidy'], open=22
+
+[iter 1] next_batch: 8 findings (remaining_open=22)
+  - CERT STR31-C                                  src\uart_driver.c:14  severity=blocker
+  - MISRA-C:2012 Rule 16.4                        src\motor_control.c:38  severity=critical
+  - MISRA-C:2012 Rule 15.6                        src\motor_control.c:57  severity=critical
+  - MISRA-C:2012 Rule 17.7                        src\uart_driver.c:14  severity=critical
+  - MISRA-C:2012 Rule 7.1                         src\uart_driver.c:39  severity=critical
+  - clang-tidy:bugprone-switch-missing-default-case src\motor_control.c:38  severity=major
+  - clang-tidy:clang-analyzer-core.uninitialized.UndefReturn src\motor_control.c:51  severity=major
+  - CERT FLP37-C                                  src\motor_control.c:64  severity=major
+[iter 1] verify -> state=active  open=13  pending=6  awaiting_human=6  diff={'new': 0, 'persisting': 13, 'resolved': 0, 'pending': 9, 'regressed': 0, 'suppressed': 2, 'deviated': 0}
+
+[iter 2] next_batch: 8 findings (remaining_open=13)
+  - MISRA-C:2012 Rule 2.5                         src\motor_control.c:10  severity=minor
+  - MISRA-C:2012 Rule 8.7                         src\motor_control.c:22  severity=minor
+  - MISRA-C:2012 Rule 10.4                        src\motor_control.c:26  severity=minor
+  - MISRA-C:2012 Rule 15.5                        src\motor_control.c:28  severity=minor
+  - MISRA-C:2012 Rule 8.7                         src\motor_control.c:34  severity=minor
+  - MISRA-C:2012 Rule 8.7                         src\motor_control.c:58  severity=minor
+  - MISRA-C:2012 Rule 8.7                         src\motor_control.c:67  severity=minor
+  - MISRA-C:2012 Rule 15.5                        src\motor_control.c:71  severity=minor
+    -> DEVIATED: MISRA-C:2012 Rule 2.5 (MOTOR_MAX_CURRENT_MA is a documented hardware current-limit ...)
+    -> DEVIATED: MISRA-C:2012 Rule 8.7 (Adding const to public driver API parameters is an ABI-affec...)
+    -> DEVIATED: MISRA-C:2012 Rule 15.5 (Guard-clause single-purpose helpers are intentionally single...)
+[iter 2] verify -> state=active  open=2  pending=7  awaiting_human=7  diff={'new': 0, 'persisting': 2, 'resolved': 0, 'pending': 1, 'regressed': 0, 'suppressed': 2, 'deviated': 10}
+
+[iter 3] next_batch: 2 findings (remaining_open=2)
+  - MISRA-C:2012 Rule 8.9                         src\uart_driver.c:9  severity=minor
+  - MISRA-C:2012 Rule 15.1                        src\uart_driver.c:30  severity=minor
+    -> DEVIATED: MISRA-C:2012 Rule 8.9 (g_uart_tx_buf must persist across calls by design (it is the...)
+[iter 3] verify -> state=awaiting_verification  open=0  pending=8  awaiting_human=8  diff={'new': 0, 'persisting': 0, 'resolved': 0, 'pending': 1, 'regressed': 0, 'suppressed': 2, 'deviated': 11}
+
+8 findings pending verification (test passed, but policy still requires review for high-severity/semantic-risk findings):
+  - CERT STR31-C                             severity=blocker   semantic_risk=False
+  - MISRA-C:2012 Rule 16.4                   severity=critical  semantic_risk=True
+  - MISRA-C:2012 Rule 15.6                   severity=critical  semantic_risk=True
+  - MISRA-C:2012 Rule 17.7                   severity=critical  semantic_risk=False
+  - MISRA-C:2012 Rule 7.1                    severity=critical  semantic_risk=False
+  - CERT FLP37-C                             severity=major     semantic_risk=True
+  - MISRA-C:2012 Rule 10.4                   severity=minor     semantic_risk=True
+  - MISRA-C:2012 Rule 15.1                   severity=minor     semantic_risk=True
+
+--- Human reviewer looks at the sentinel-cast fix specifically ---
+Finding d7c805330e9fa150: line_content now = '    if (sensor_val_ma > threshold)'
+A human reviewer recognizes the '-1 means no limit' sentinel is now broken by the cast (threshold=-1 -> (uint32_t)-1 = 4294967295, i.e. 'no limit' became 'an enormous limit') and REJECTS this fix — applying the correct one instead of approving it.
+  approve_finding CERT STR31-C                             -> {'ok': True, 'resolved': '303716418ac18e71', 'approved_by': 'bench-reviewer@example.com'}
+  approve_finding MISRA-C:2012 Rule 16.4                   -> {'ok': True, 'resolved': '1025b5d698c73630', 'approved_by': 'bench-reviewer@example.com'}
+  approve_finding MISRA-C:2012 Rule 15.6                   -> {'ok': True, 'resolved': '1f6377c29ea3e108', 'approved_by': 'bench-reviewer@example.com'}
+  approve_finding MISRA-C:2012 Rule 17.7                   -> {'ok': True, 'resolved': 'e4cae6602e216324', 'approved_by': 'bench-reviewer@example.com'}
+  approve_finding MISRA-C:2012 Rule 7.1                    -> {'ok': True, 'resolved': '4cc508d4bf5b6991', 'approved_by': 'bench-reviewer@example.com'}
+  approve_finding CERT FLP37-C                             -> {'ok': True, 'resolved': '0ea07b802db83503', 'approved_by': 'bench-reviewer@example.com'}
+  approve_finding MISRA-C:2012 Rule 15.1                   -> {'ok': True, 'resolved': '346e7506394fd139', 'approved_by': 'bench-reviewer@example.com'}
+
+verify -> state=awaiting_verification  open=0  pending=1
+  approve_finding MISRA-C:2012 Rule 10.4                   (corrected) -> {'ok': True, 'resolved': 'd7c805330e9fa150', 'approved_by': 'bench-reviewer@example.com'}
+verify -> state=converged  open=0  pending=0
+
+FINAL STATE: converged
+Session status: [
+  {
+    "iteration": 3,
+    "event": "verify",
+    "open": 0,
+    "pending": 8,
+    "diff": {
+      "new": 0,
+      "persisting": 0,
+      "resolved": 0,
+      "pending": 1,
+      "regressed": 0,
+      "suppressed": 2,
+      "deviated": 11
+    },
+    "ts": 1783681621.449049
+  },
+  {
+    "iteration": 4,
+    "event": "verify",
+    "open": 0,
+    "pending": 1,
+    "diff": {
+      "new": 0,
+      "persisting": 0,
+      "resolved": 0,
+      "pending": 0,
+      "regressed": 0,
+      "suppressed": 2,
+      "deviated": 11
+    },
+    "ts": 1783681623.1477451
+  },
+  {
+    "iteration": 5,
+    "event": "verify",
+    "open": 0,
+    "pending": 0,
+    "diff": {
+      "new": 0,
+      "persisting": 0,
+      "resolved": 0,
+      "pending": 0,
+      "regressed": 0,
+      "suppressed": 2,
+      "deviated": 11
+    },
+    "ts": 1783681624.818648
+  }
+]
+
+==============================================================================
+SESSION 2 — oscillation freezing (analyzer_only policy, isolated)
+==============================================================================
+[cycle 1] after FIX    -> state=active diff={'new': 0, 'persisting': 23, 'resolved': 1, 'pending': 0, 'regressed': 0, 'suppressed': 0, 'deviated': 0}
+[cycle 1] after REGRESS -> state=active diff={'new': 0, 'persisting': 23, 'resolved': 0, 'pending': 0, 'regressed': 1, 'suppressed': 0, 'deviated': 0} regressions=['MISRA-C:2012 Rule 7.1']
+[cycle 2] after FIX    -> state=active diff={'new': 0, 'persisting': 23, 'resolved': 1, 'pending': 0, 'regressed': 0, 'suppressed': 0, 'deviated': 0}
+[cycle 2] after REGRESS -> state=active diff={'new': 0, 'persisting': 23, 'resolved': 0, 'pending': 0, 'regressed': 1, 'suppressed': 0, 'deviated': 0} regressions=['MISRA-C:2012 Rule 7.1']
+
+next_batch frozen_needs_human: ['MISRA-C:2012 Rule 7.1 x2']
+CONFIRMED: finding frozen as needs_human after 2 regressions, no longer offered in next_batch.
+
+==============================================================================
+SESSION 3 — stall detection (no-progress verifies)
+==============================================================================
+[iter 1] verify -> state=active open=24
+[iter 2] verify -> state=stalled open=24
+FINAL STATE: stalled
+CONFIRMED: session correctly stalls after stall_limit verifies with no net progress.
+
+==============================================================================
+SESSION 4 — iteration budget exhaustion
+==============================================================================
+[iter 1] verify -> state=active iteration=1
+[iter 2] verify -> state=budget_exhausted iteration=2
+FINAL STATE: budget_exhausted
+CONFIRMED: session correctly stops at max_iterations regardless of remaining findings.

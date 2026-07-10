@@ -97,7 +97,8 @@ _GOTO_RE = re.compile(r"\bgoto\s+\w+\s*;")
 _UNION_RE = re.compile(r"\bunion\b\s*(\w+)?\s*\{")
 _UNDEF_RE = re.compile(r"^\s*#\s*undef\b")
 _TRIGRAPH_RE = re.compile(r"\?\?[=/'()!<>\-]")
-_VLA_RE = re.compile(r"\b(?:int|char|float|double|long|short|uint\d+_t|int\d+_t|size_t)\s+\w+\s*\[\s*[a-zA-Z_]\w*\s*\]")
+_VLA_RE = re.compile(r"\b(?:int|char|float|double|long|short|uint\d+_t|int\d+_t|size_t)\s+\w+\s*\[\s*([a-zA-Z_]\w*)\s*\]")
+_MACRO_CONST_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 _FLOAT_EQ_RE = re.compile(r"\b(float|double)\b")
 _FUNC_DEF_RE = re.compile(r"^\s*(?:static\s+|inline\s+|extern\s+)*[A-Za-z_][\w\s\*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{?\s*$")
 _BASIC_TYPE_DECL_RE = re.compile(r"^\s*(?:static\s+|const\s+|volatile\s+|extern\s+)*(?:unsigned\s+|signed\s+)?(int|short|long)\b(?!\s*\()")
@@ -156,7 +157,8 @@ class NativeAnalyzer(Analyzer):
         clean_lines = clean.splitlines()
         add = lambda rule, ln, msg: out.append(x) if (x := self._mk(rule, f, root, ln, raw_lines, msg)) else None
 
-        func_names: set[str] = set()
+        func_stack: list[list] = []  # [name, depth_at_open], current function is func_stack[-1]
+        pending_func_name: str | None = None
         switch_stack: list[tuple[int, int, bool]] = []  # (start_line, depth_at_open, saw_default)
         depth = 0
 
@@ -191,7 +193,15 @@ class NativeAnalyzer(Analyzer):
                 add("MISRA 20.5", i, "#undef directive")
             if _TRIGRAPH_RE.search(raw):
                 add("MISRA 4.2", i, "trigraph sequence")
-            if _VLA_RE.search(line) and "(" not in line.split("[")[0]:
+            vla_m = _VLA_RE.search(line)
+            # An ALL_CAPS array-size identifier is, by nearly universal C
+            # convention, a #define'd compile-time constant, not a runtime
+            # variable — without preprocessing, this heuristic can't resolve
+            # the macro's value, but it can at least stop mistaking
+            # "uint8_t buf[BUF_SIZE]" (a fixed array) for a VLA (see
+            # BENCHMARK-SUITE-REPORT.md: confirmed false positive, was firing
+            # on every macro-sized array in a struct).
+            if vla_m and "(" not in line.split("[")[0] and not _MACRO_CONST_RE.match(vla_m.group(1)):
                 add("MISRA 18.8", i, "possible variable-length array")
             if _BASIC_TYPE_DECL_RE.match(line) and "main" not in line:
                 add("MISRA Dir 4.6", i, "basic numeric type instead of fixed-width <stdint.h> type")
@@ -206,15 +216,20 @@ class NativeAnalyzer(Analyzer):
                and len(stripped) > 8 and not stripped[2:].strip().startswith(("!", "TODO", "NOTE", "FIXME")):
                 add("MISRA Dir 4.4", i, "possible commented-out code")
 
-            # recursion (direct): function calls itself
+            # recursion (direct): function calls itself. Checked against only
+            # the CURRENT enclosing function (tracked incrementally via brace
+            # depth below) rather than every function name seen so far in the
+            # file — the previous every-name-times-every-line approach was
+            # O(functions x lines), which made large files (thousands of
+            # functions) unusably slow (see BENCHMARK-SUITE-REPORT.md).
+            if func_stack:
+                cur_name = func_stack[-1][0]
+                if re.search(rf"(?<![\w.]){re.escape(cur_name)}\s*\(", line) and not _FUNC_DEF_RE.match(line):
+                    add("MISRA 17.2", i, f"direct recursion: '{cur_name}' calls itself")
+
             fm = _FUNC_DEF_RE.match(line)
             if fm and not line.strip().startswith(("if", "for", "while", "switch", "return", "else")):
-                func_names.add(fm.group(1))
-            for name in func_names:
-                if re.search(rf"(?<![\w.]){re.escape(name)}\s*\(", line) and not _FUNC_DEF_RE.match(line):
-                    ctx = enclosing_function(clean_lines, i - 1)
-                    if ctx == name:
-                        add("MISRA 17.2", i, f"direct recursion: '{name}' calls itself")
+                pending_func_name = fm.group(1)
 
             # float equality: crude but effective — == or != on a line mentioning float vars is
             # too noisy; instead flag literal float comparisons like `x == 0.1`
@@ -223,6 +238,11 @@ class NativeAnalyzer(Analyzer):
 
             # switch/default tracking
             depth += line.count("{") - line.count("}")
+            if pending_func_name is not None and "{" in line:
+                func_stack.append([pending_func_name, depth])
+                pending_func_name = None
+            while func_stack and func_stack[-1][1] > depth:
+                func_stack.pop()
             if re.search(r"\bswitch\s*\(", line):
                 switch_stack.append([i, depth, False])  # type: ignore[list-item]
             if switch_stack and re.search(r"\bdefault\s*:", line):

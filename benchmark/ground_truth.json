@@ -1,0 +1,138 @@
+{
+  "_comment": "Ground truth for benchmark/fixtures/*.c, built from manual review of a real `maishac scan` run (all 3 analyzers, include_paths=[benchmark/stubs]) on 2026 test day. Categories: 'seeded' = a defect deliberately planted in the fixture to test recall. 'known_true_extra_rules' = rule IDs that legitimately, correctly fire on this code as a side effect of realistic patterns (multiple returns, missing header prototypes, implicit pointer/int conversions, etc.) that were NOT deliberately seeded but are not false positives either -- allow-listed by rule id rather than exact line since they're incidental. 'known_false_positives' = specific (file, line, rule) triples manually confirmed to be analyzer mistakes, not real defects. Anything found that is in neither list is 'unclassified' and must be manually triaged before being called a false positive.",
+
+  "exclude_path_prefixes": ["benchmark/stubs", "benchmark\\stubs"],
+
+  "known_true_extra_rules": [
+    "MISRA-C:2012 Rule 8.4",
+    "MISRA-C:2012 Rule 8.9",
+    "MISRA-C:2012 Rule 17.7",
+    "MISRA-C:2012 Rule 15.5",
+    "MISRA-C:2012 Rule 11.4",
+    "MISRA-C:2012 Rule 11.5",
+    "MISRA-C:2012 Rule 10.8",
+    "MISRA-C:2012 Rule 17.8",
+    "MISRA-C:2012 Rule 21.7",
+    "MISRA-C:2012 Dir 4.6",
+    "BARR-C 3.1a",
+    "CERT ERR33-C",
+    "CERT MSC30-C",
+    "cppcheck:legacyUninitvar",
+    "clang-tidy:clang-analyzer-core.FixedAddressDereference",
+    "clang-tidy:bugprone-switch-missing-default-case",
+    "clang-tidy:bugprone-assignment-in-if-condition",
+    "clang-tidy:clang-analyzer-security.insecureAPI.strcpy",
+    "clang-tidy:clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling",
+    "clang-tidy:clang-diagnostic-error"
+  ],
+  "_known_true_extra_rules_notes": {
+    "MISRA-C:2012 Dir 4.6 (04_memory_and_signals.c line 97)": "cmp_int's parameters are 'const void *', matched loosely by the native basic-type heuristic; a genuine, if incidental, Dir 4.6-adjacent hit.",
+    "clang-tidy:clang-analyzer-security.insecureAPI.*": "Clang's insecureAPI family flags memcpy/memset/strcpy/sprintf/scanf UNCONDITIONALLY, even on already-safely-bounded call sites (confirmed: it fires twice on 07_clean_reference.c's provably-safe memcpy/memset). This is a real characteristic of the underlying engine, not a Maisha bug -- but it means even MISRA-compliant, bounds-checked code will need per-project suppressions/deviations for these functions, same as Maisha's own native BANNED_CALLS policy.",
+    "clang-tidy:clang-diagnostic-error": "Only ever appears in the WITHOUT --include comparison run, one per file with an unresolved system header. Confirms the include-path fix: this class disappears entirely once --include is supplied."
+  },
+
+  "fixtures": {
+    "01_string_handling.c": {
+      "seeded": [
+        {"rule": "CERT STR31-C", "line": 20, "note": "strcpy unbounded copy"},
+        {"rule": "CERT STR31-C", "line": 26, "note": "strcat unbounded append"},
+        {"rule": "CERT STR31-C", "line": 32, "note": "sprintf unbounded format"},
+        {"rule": "CERT STR31-C", "line": 57, "note": "strcpy in log_duplicate"},
+        {"rule": "MISRA-C:2012 Rule 21.6", "line": 33, "note": "printf stdio in production (native, call site)"},
+        {"rule": "MISRA-C:2012 Rule 21.6", "line": 9, "note": "printf stdio in production (cppcheck, #include site)"},
+        {"rule": "MISRA-C:2012 Rule 21.3", "line": 54, "note": "malloc dynamic allocation"}
+      ],
+      "false_positive_traps": [
+        {"pattern": "log_set_prefix_safe (lines 39-48)", "why": "bounded memcpy with explicit length clamp and manual null-termination; must NOT be flagged as an unbounded copy"},
+        {"pattern": "log_get_buffer (lines 64-67)", "why": "returns a pointer to static storage, not dynamically allocated or dangling; must NOT be flagged as a memory-safety issue"}
+      ],
+      "known_false_positives": [],
+      "_fixed_false_positives": [
+        {"rule": "MISRA-C:2012 Rule 18.8", "line": 15, "note": "g_log_buf is a fixed array sized by a compile-time macro (LOG_BUF_SIZE), not a variable-length array. FIXED this cycle: native.py's VLA check now skips ALL_CAPS array-size identifiers (near-universal macro-constant naming convention). No longer fires here."}
+      ]
+    },
+
+    "02_register_driver.c": {
+      "seeded": [
+        {"rule": "MISRA-C:2012 Rule 19.2", "line": 15, "note": "union for hardware register overlay"},
+        {"rule": "MISRA-C:2012 Dir 4.6", "line": 31, "note": "basic type 'int' instead of stdint type"},
+        {"rule": "MISRA-C:2012 Rule 15.1", "line": 54, "note": "goto for error-path cleanup"},
+        {"rule": "MISRA-C:2012 Rule 16.4", "line": 68, "note": "switch with no default label"},
+        {"rule": "MISRA-C:2012 Rule 7.1", "line": 86, "note": "octal integer constant (010)"},
+        {"rule": "MISRA-C:2012 Rule 13.4", "line": 89, "note": "assignment used inside if condition"}
+      ],
+      "false_positive_traps": [
+        {"pattern": "uart_reg_at (lines 39-42)", "why": "constant-offset register-bank pointer arithmetic is standard driver practice; MISRA 18.4 must not fire (it correctly doesn't -- but MISRA 11.4, int-to-pointer conversion, legitimately does fire here, which is a DIFFERENT and genuinely correct rule, not a false positive; see known_true_extra_rules)"}
+      ],
+      "known_false_positives": [],
+      "note": "Dir 4.6 also incidentally, correctly fires on lines 45 and 84 (uart_send_byte / uart_self_test both declared returning bare 'int'). Not deliberately seeded as separate cases but genuinely correct -- counted as incidental true positives, not false positives."
+    },
+
+    "03_state_machine.c": {
+      "seeded": [
+        {"rule": "MISRA-C:2012 Rule 17.2", "line": 35, "note": "genuine direct recursion in retry_backoff_ms"},
+        {"rule": "MISRA-C:2012 Rule 15.6", "line": 73, "note": "braceless if body in lock_handle_event"}
+      ],
+      "false_positive_traps": [
+        {"pattern": "compute_next_retry_delay_ms (lines 42-47)", "why": "a DIFFERENT function, with a multi-line signature, that legitimately calls retry_backoff_ms once -- the historical Maisha bug (fixed this cycle) misattributed this call site to retry_backoff_ms itself and reported false recursion"},
+        {"pattern": "lock_context_is_valid (lines 53-67)", "why": "an ordinary bounded for-loop with no recursion or missing braces -- must not be flagged by an over-eager heuristic"}
+      ],
+      "known_false_positives": []
+    },
+
+    "04_memory_and_signals.c": {
+      "seeded": [
+        {"rule": "MISRA-C:2012 Rule 21.4", "line": 18, "note": "setjmp"},
+        {"rule": "MISRA-C:2012 Rule 21.4", "line": 26, "note": "longjmp"},
+        {"rule": "MISRA-C:2012 Rule 21.5", "line": 38, "note": "signal"},
+        {"rule": "MISRA-C:2012 Rule 21.5", "line": 43, "note": "raise"},
+        {"rule": "MISRA-C:2012 Rule 21.3", "line": 51, "note": "malloc"},
+        {"rule": "MISRA-C:2012 Rule 21.3", "line": 63, "note": "free"},
+        {"rule": "CERT ERR34-C", "line": 71, "note": "atoi no error detection"},
+        {"rule": "CERT CON33-C", "line": 78, "note": "strtok static internal state"},
+        {"rule": "CERT MSC32-C", "line": 86, "note": "rand weak PRNG"},
+        {"rule": "CERT ENV33-C", "line": 92, "note": "system command processor"},
+        {"rule": "MISRA-C:2012 Rule 21.9", "line": 104, "note": "qsort possibly-recursive library sort"}
+      ],
+      "false_positive_traps": [],
+      "known_false_positives": []
+    },
+
+    "05_float_and_int_edge_cases.c": {
+      "seeded": [
+        {"rule": "CERT FLP37-C", "line": 14, "note": "float equality =="},
+        {"rule": "CERT FLP37-C", "line": 24, "note": "float equality !="},
+        {"rule": "MISRA-C:2012 Rule 7.3", "line": 34, "note": "lowercase l suffix (100000ul)"}
+      ],
+      "false_positive_traps": [
+        {"pattern": "within_bounds (lines 40-47)", "why": "a plain, safe unsigned <= comparison against a named parameter -- must not be flagged"}
+      ],
+      "known_false_positives": [],
+      "note": "check_shutdown_threshold (lines 58-63) is the README's sentinel-cast trap. No native/cppcheck/clang-tidy rule is expected to catch the SEMANTIC bug (that -1 becomes UINT32_MAX); this fixture instead documents that a rescan-only ('analyzer_only') policy would consider it clean. The behavioral risk is exercised end-to-end against the verification gate in the synthetic firmware module, not here."
+    },
+
+    "06_preprocessor_heavy.c": {
+      "seeded": [
+        {"rule": "MISRA-C:2012 Rule 15.6", "line": 61, "note": "genuine braceless if body, positioned next to preprocessor noise"},
+        {"rule": "MISRA-C:2012 Rule 20.5", "line": 47, "note": "#undef inside clamp_reading (still a real #undef, rule is intentionally broad)"},
+        {"rule": "MISRA-C:2012 Rule 20.5", "line": 72, "note": "#undef of LOCAL_SCRATCH_SIZE"}
+      ],
+      "false_positive_traps": [
+        {"pattern": "apply_filter (lines 16-36)", "why": "if-header's real body IS braced, just on the far side of an #if/#else/#endif block -- the exact FreeRTOS-derived false-positive pattern the MISRA 15.6 preprocessor-blindness fix targets"},
+        {"pattern": "clamp_reading (lines 41-54)", "why": "if-header's real body IS braced, on the far side of #ifdef/#undef/#endif -- must not be flagged, and the #undef itself must not confuse the brace check (it legitimately triggers 20.5 as its own separate, correct finding)"}
+      ],
+      "known_false_positives": []
+    },
+
+    "07_clean_reference.c": {
+      "seeded": [],
+      "false_positive_traps": [
+        {"pattern": "entire file", "why": "deliberately well-written: fixed-width types, bounded copies, no dynamic memory, no banned calls, always-braced, single-exit functions, no float equality. Expected near-zero substantive findings."}
+      ],
+      "known_false_positives": [],
+      "_fixed_false_positives": [
+        {"rule": "MISRA-C:2012 Rule 18.8", "line": 19, "note": "uint8_t data[RING_BUFFER_CAPACITY] inside a struct -- same class as 01_string_handling.c line 15. FIXED this cycle, see that file's note."}
+      ]
+    }
+  }
+}

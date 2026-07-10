@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "SimulatedQualifiedEngine",
+          "informationUri": "https://example.invalid/not-a-real-tool",
+          "version": "9.9.9",
+          "rules": [
+            {"id": "misra-c2012-10.1", "name": "EssentialTypeCategory"},
+            {"id": "CERT-ERR33-C", "name": "DetectIgnoredReturnValue"},
+            {"id": "PROPRIETARY-STACK-DEPTH-001", "name": "StackDepthBudgetExceeded"}
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "misra-c2012-10.1",
+          "level": "error",
+          "message": {"text": "Essential type category mismatch in arithmetic expression."},
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {"uri": "src/motor_control.c"},
+                "region": {
+                  "startLine": 26,
+                  "startColumn": 9,
+                  "snippet": {"text": "    if (sensor_val_ma > threshold)"}
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CERT-ERR33-C",
+          "level": "warning",
+          "message": {"text": "Return value of library function is not checked."},
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {"uri": "src/uart_driver.c"},
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 5,
+                  "snippet": {"text": "    strcpy(g_uart_tx_buf, msg);"}
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROPRIETARY-STACK-DEPTH-001",
+          "level": "error",
+          "message": {"text": "Worst-case call-graph stack depth (312 bytes) exceeds the configured budget (256 bytes) for this task's stack allocation."},
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {"uri": "src/motor_control.c"},
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 1,
+                  "snippet": {"text": "int32_t motor_should_shutdown(uint32_t sensor_val_ma)"}
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

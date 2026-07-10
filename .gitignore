@@ -5,3 +5,7 @@ build/
 dist/
 .pytest_cache/
 .maishac/
+
+# benchmark/ harness scripts regenerate these scratch working directories
+# (each contains its own .maishac/memory.db) on every run — not source.
+benchmark/results/_*/

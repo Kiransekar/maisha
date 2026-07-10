@@ -1,0 +1,168 @@
+{
+  "without_include_paths": {
+    "report": {
+      "fixtures": {
+        "01_string_handling.c": {
+          "seeded_total": 7,
+          "seeded_detected": 7,
+          "seeded_missed": [],
+          "true_extra_count": 16,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 23
+        },
+        "02_register_driver.c": {
+          "seeded_total": 6,
+          "seeded_detected": 6,
+          "seeded_missed": [],
+          "true_extra_count": 14,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 22
+        },
+        "03_state_machine.c": {
+          "seeded_total": 2,
+          "seeded_detected": 2,
+          "seeded_missed": [],
+          "true_extra_count": 4,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 6
+        },
+        "04_memory_and_signals.c": {
+          "seeded_total": 11,
+          "seeded_detected": 11,
+          "seeded_missed": [],
+          "true_extra_count": 22,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 35
+        },
+        "05_float_and_int_edge_cases.c": {
+          "seeded_total": 3,
+          "seeded_detected": 3,
+          "seeded_missed": [],
+          "true_extra_count": 8,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 11
+        },
+        "06_preprocessor_heavy.c": {
+          "seeded_total": 3,
+          "seeded_detected": 3,
+          "seeded_missed": [],
+          "true_extra_count": 4,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 7
+        },
+        "07_clean_reference.c": {
+          "seeded_total": 0,
+          "seeded_detected": 0,
+          "seeded_missed": [],
+          "true_extra_count": 6,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 6
+        }
+      },
+      "totals": {
+        "seeded": 32,
+        "seeded_detected": 32,
+        "true_extra": 74,
+        "confirmed_fp": 0,
+        "unclassified": 0
+      }
+    },
+    "analyzers_used": [
+      "native",
+      "cppcheck",
+      "clang-tidy"
+    ],
+    "elapsed_s": 2.0470000000000255,
+    "total_findings": 110
+  },
+  "with_include_paths": {
+    "report": {
+      "fixtures": {
+        "01_string_handling.c": {
+          "seeded_total": 7,
+          "seeded_detected": 7,
+          "seeded_missed": [],
+          "true_extra_count": 21,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 28
+        },
+        "02_register_driver.c": {
+          "seeded_total": 6,
+          "seeded_detected": 6,
+          "seeded_missed": [],
+          "true_extra_count": 14,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 22
+        },
+        "03_state_machine.c": {
+          "seeded_total": 2,
+          "seeded_detected": 2,
+          "seeded_missed": [],
+          "true_extra_count": 4,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 6
+        },
+        "04_memory_and_signals.c": {
+          "seeded_total": 11,
+          "seeded_detected": 11,
+          "seeded_missed": [],
+          "true_extra_count": 25,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 38
+        },
+        "05_float_and_int_edge_cases.c": {
+          "seeded_total": 3,
+          "seeded_detected": 3,
+          "seeded_missed": [],
+          "true_extra_count": 8,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 11
+        },
+        "06_preprocessor_heavy.c": {
+          "seeded_total": 3,
+          "seeded_detected": 3,
+          "seeded_missed": [],
+          "true_extra_count": 4,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 7
+        },
+        "07_clean_reference.c": {
+          "seeded_total": 0,
+          "seeded_detected": 0,
+          "seeded_missed": [],
+          "true_extra_count": 7,
+          "confirmed_fp": [],
+          "unclassified": [],
+          "total_findings_in_scope": 7
+        }
+      },
+      "totals": {
+        "seeded": 32,
+        "seeded_detected": 32,
+        "true_extra": 83,
+        "confirmed_fp": 0,
+        "unclassified": 0
+      }
+    },
+    "analyzers_used": [
+      "native",
+      "cppcheck",
+      "clang-tidy"
+    ],
+    "elapsed_s": 2.2660000000000764,
+    "total_findings": 138
+  }
+}

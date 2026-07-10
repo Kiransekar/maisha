@@ -15,7 +15,12 @@ from ..model import Finding, enclosing_function, relpath
 from ..rules import REGISTRY
 
 _DIAG = re.compile(
-    r"^(?P<file>[^:\n]+):(?P<line>\d+):(?P<col>\d+):\s+(?P<sev>warning|error):\s+"
+    # `file` is non-greedy .+? rather than [^:\n]+ so a Windows drive-letter
+    # colon ("D:\path\file.c") doesn't get mistaken for the line:col
+    # separator — clang-tidy always emits absolute (drive-letter) paths in
+    # its diagnostics on Windows regardless of how the path was passed in,
+    # and the old pattern silently matched zero diagnostics as a result.
+    r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+):\s+(?P<sev>warning|error):\s+"
     r"(?P<msg>.*?)\s+\[(?P<check>[\w\-.,]+)\]\s*$", re.MULTILINE)
 _CERT_CHECK = re.compile(r"cert-([a-z]{3}\d{2})-c")
 

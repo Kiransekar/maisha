@@ -74,8 +74,12 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
   [COVERAGE.md](COVERAGE.md) (generated from the code, so gaps are explicit).
   A real-world run against the FreeRTOS kernel — with a measured false-positive
   rate and the tool bugs it surfaced — is in [BENCHMARKS.md](BENCHMARKS.md).
-  Headline lesson: **pass your include paths to cppcheck/clang-tidy**, or most
-  of the substantive findings are configuration false positives.
+  Headline lesson: **pass your include paths to cppcheck/clang-tidy** with
+  `--include`/`-I` (repeatable), or most of the substantive findings are
+  configuration false positives. A from-scratch accuracy/reliability suite —
+  ground-truthed fixtures, a full fix-loop simulation, SARIF import, CLI
+  end-to-end and edge-case tests — is in
+  [BENCHMARK-SUITE-REPORT.md](BENCHMARK-SUITE-REPORT.md).
 - **Not a substitute for human review.** By default a fix is never marked
   `resolved` on a clean rescan alone — a passing test run or an explicit human
   approval is required, and semantic-risk / high-severity findings *always*
@@ -96,21 +100,29 @@ are never cleared by a native rescan.
 Requires Python 3.10+.
 
 ```bash
-pip install ./maisha          # or: pip install -e ./maisha for development
+git clone https://github.com/Kiransekar/maisha.git
+cd maisha
+pip install .                 # or: pip install -e ".[dev]" for development (adds pytest)
 ```
 
-Optional but strongly recommended external analyzers:
+This installs the `maishac` CLI (entry point defined in `pyproject.toml`) and
+the `maishac` Python package. Verify with `maishac --help`.
+
+Optional but strongly recommended external analyzers — native works with
+zero dependencies, but cppcheck (MISRA addon) and clang-tidy (`cert-*`
+checks) meaningfully increase coverage:
 
 ```bash
 # Debian/Ubuntu
 apt install cppcheck clang-tidy
 
-# or, without root (prebuilt wheels)
+# or, without root, anywhere pip works (prebuilt wheels, incl. Windows/macOS)
 pip install cppcheck clang-tidy
 ```
 
 Maisha degrades gracefully: any analyzer not on `PATH` is skipped and the
-native analyzer always works.
+native analyzer always works. Run `maishac scan` once and check
+`analyzers_used` in the output to confirm what's actually active.
 
 ## Quickstart (CLI)
 
@@ -118,20 +130,24 @@ native analyzer always works.
 cd your-firmware-project
 
 maishac scan src/                  # one-shot scan, syncs memory
+# headers outside src/ (e.g. a vendor SDK or FreeRTOSConfig.h)? forward them:
+maishac scan src/ --include include/ --include vendor/sdk/inc
+
 maishac findings --limit 20        # ranked open findings
 maishac rule "MISRA 21.3"          # explain a rule + cross-standard refs
 
 # The engineered loop (what an agent drives via MCP):
-maishac session begin src/
-maishac session batch              # next prioritized batch with briefings
+maishac session begin src/ --verification-policy human_gated
+# -> {"session_id": "abc123...", ...} — use that id below
+maishac session batch abc123       # next prioritized batch with briefings
 # ...edit code (you or your agent)...
-maishac session verify             # rescan, diff, grade attempts, run the test gate
+maishac session verify abc123      # rescan, diff, grade attempts, run the test gate
 maishac approve <fingerprint> --by lead@example.com   # human sign-off on a verified fix
-maishac session status
+maishac session status abc123
 
 maishac deviate "MISRA 19.2" --scope "drivers/**" \
     --justification "Union required for hardware register overlay mapping" \
-    --approver lead@example.com --expires 2027-01-01
+    --approver lead@example.com --expires-days 365
 maishac suppress <fingerprint> --reason "false positive: macro expansion"
 maishac note "This codebase uses FreeRTOS; heap_4 allocator is approved" --tags misra-21.3
 maishac report --format sarif > compliance.sarif
@@ -238,6 +254,17 @@ conversions, control-flow changes) and **high-severity findings** always require
 human approval — a green test suite that never exercises the sentinel case cannot
 resolve them. Every resolution records how it was confirmed (`analyzer`/`test`/
 `human`) and, for human sign-off, `approved_by`.
+
+> **Set expectations accordingly:** the semantic-risk rule-category list is
+> broad (it covers most of MISRA's essential-type, control-flow and
+> switch-statement rules, plus CERT's `INT`/`FLP` families) — in practice,
+> `test_gated` sessions on typical MISRA findings end up requiring human
+> sign-off almost as often as `human_gated` does. A full end-to-end
+> simulation confirmed a passing test suite auto-resolved **zero** of eight
+> pending findings in one representative session — see
+> [BENCHMARK-SUITE-REPORT.md §3.2](BENCHMARK-SUITE-REPORT.md#32-the-gate-is-more-conservative-than-it-looks).
+> Budget human review time accordingly; don't expect `test_gated` to remove
+> most of the review load.
 
 ```bash
 maishac session begin src/ --verification-policy test_gated --test-command "make test"

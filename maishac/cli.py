@@ -233,6 +233,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
+    # On Windows, stdout/stderr default to the console's legacy codepage
+    # (e.g. cp1252), which can't represent arbitrary Unicode that ends up in
+    # report text, finding messages, or user-supplied notes/justifications.
+    # Without this, printing such a character crashes the whole CLI instead
+    # of just degrading that one character.
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(errors="replace")
+            except Exception:  # noqa: BLE001 — never let output-hardening itself crash the CLI
+                pass
     args = build_parser().parse_args(argv)
     args.fn(args)
 

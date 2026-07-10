@@ -5,7 +5,43 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- **Full benchmark suite** (`benchmark/`, see `BENCHMARK-SUITE-REPORT.md`) —
+  7 hand-annotated synthetic fixtures (100% seeded-defect recall, 100%
+  precision after fixes), a real multi-analyzer install (cppcheck +
+  clang-tidy, not native-only), an end-to-end fix-loop simulation against a
+  synthetic firmware module exercising the verification gate, oscillation
+  freezing, stall detection and budget exhaustion, a SARIF-import validation
+  against a synthetic external-engine file, CLI-as-subprocess end-to-end
+  tests, edge cases, and a performance stress test. Found and fixed 4 real
+  bugs (see below). README's verification-gate section now sets explicit
+  expectations about how often `test_gated` actually auto-resolves fixes in
+  practice (answer: rarely, for typical MISRA rule categories).
+
 ### Fixed
+- **Four bugs found by the full benchmark suite (`benchmark/`, see
+  BENCHMARK-SUITE-REPORT.md).**
+  - `clang-tidy`'s diagnostic-parsing regex assumed Unix-style paths; a
+    Windows drive-letter colon (`D:\...`) broke the `file:line:col:` split,
+    silently dropping nearly every clang-tidy finding on Windows. Fixed in
+    `analyzers/clang_tidy.py` (`_DIAG` now uses a non-greedy file group).
+  - The native analyzer's MISRA 17.2 (recursion) check looped over every
+    function name seen so far in the file, for every line — O(functions x
+    lines). A 2000-function/12k-line synthetic file took 374s to scan; now
+    tracks only the current enclosing function via a brace-depth stack and
+    scans the same file in ~0.4s (native.py).
+  - `maishac report --format markdown` crashed with `UnicodeEncodeError` on
+    a default Windows console (cp1252 can't encode the checkmark/cross/party
+    emoji the standards-matrix table used). Replaced with plain ASCII
+    (report.py); the CLI also now hardens stdout/stderr with
+    `errors="replace"` so no single unprintable character can crash any
+    command's output again.
+  - The native MISRA 18.8 (possible VLA) check misidentified a fixed array
+    sized by an `ALL_CAPS` macro constant (e.g. `uint8_t buf[BUF_SIZE];`) as
+    a variable-length array — confirmed on two independent fixtures. Now
+    skips `ALL_CAPS` size identifiers (the near-universal macro-constant
+    convention) while still catching genuine runtime-sized arrays
+    (native.py).
 - **The three bugs the FreeRTOS benchmark run surfaced (§8 follow-up).**
   - `maishac scan`/`session begin` now accept `--include`/`-I` (repeatable;
     MCP: `include_paths`), forwarded as `-I<path>` to cppcheck and clang-tidy.
