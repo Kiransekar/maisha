@@ -93,6 +93,16 @@ loop, memory, verification gate and deviation register on top of their findings 
 recognized MISRA/CERT ruleIds map onto the knowledge base, and imported findings
 are never cleared by a native rescan.
 
+**Rich SARIF mapping.** Import isn't lossy: a qualified engine's `codeFlows`
+(the data-flow path *to* the defect) are parsed and surfaced in the agent
+briefing, so a fixer sees how a defect flows, not just where it lands. Export
+emits cross-standard equivalences as SARIF `reportingDescriptor.relationships`
+(e.g. a MISRA rule linked to its CERT equivalent), with every relationship
+target present as a descriptor. Maisha's own identity travels in
+`partialFingerprints` (`maishac/v1`), and `startColumn` + code flows survive an
+import → export round-trip, so re-exporting a qualified engine's findings
+loses nothing.
+
 ---
 
 ## Install
