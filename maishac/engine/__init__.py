@@ -30,6 +30,7 @@ Guards:
 
 from __future__ import annotations
 
+import json
 import subprocess
 import time
 from pathlib import Path
@@ -95,7 +96,6 @@ class LoopEngine:
         same memory/loop/gate machinery as a native scan. Imported findings are
         not cleared by native rescans (see sync_scan producers)."""
         from .. import report as report_mod
-        import json
         data = json.loads(Path(path).read_text("utf-8"))
         findings = report_mod.parse_sarif(data, self.root)
         diff = self.mem.sync_scan(findings, [], producers=set())
@@ -311,6 +311,7 @@ class LoopEngine:
             "rule_summary": meta.get("summary", ""),
             "fix_hint": f["fix_hint"] or meta.get("fix", ""),
             "equivalent_rules": REGISTRY.cross_refs(f["rule_id"]),
+            "code_flow": json.loads(f["code_flow"]) if f.get("code_flow") else [],
             "failed_strategies": failed,
             "relevant_memory": [{"topic": n["topic"], "content": n["content"]}
                                  for n in {n["id"]: n for n in notes}.values()][:3],

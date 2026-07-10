@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS findings (
   line_content TEXT,
   context_symbol TEXT,
   fix_hint TEXT,
+  code_flow TEXT,                -- JSON data-flow path from an imported qualified-engine SARIF (null for native findings)
   status TEXT NOT NULL DEFAULT 'open',        -- open|pending_verification|resolved|suppressed|deviated|regressed
   seen_count INTEGER NOT NULL DEFAULT 1,
   regress_count INTEGER NOT NULL DEFAULT 0,
@@ -137,7 +138,8 @@ class MemoryStore:
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(findings)")}
         for name, ddl in [("semantic_risk", "INTEGER NOT NULL DEFAULT 0"),
                           ("analyzer_cleared_at", "REAL"), ("verification_method", "TEXT"),
-                          ("approved_by", "TEXT"), ("approved_at", "REAL")]:
+                          ("approved_by", "TEXT"), ("approved_at", "REAL"),
+                          ("code_flow", "TEXT")]:
             if name not in cols:
                 self.db.execute(f"ALTER TABLE findings ADD COLUMN {name} {ddl}")
 
@@ -183,10 +185,11 @@ class MemoryStore:
                 self.db.execute(
                     """INSERT INTO findings (fingerprint, rule_id, standard, severity, file,
                        line, message, analyzer, line_content, context_symbol, fix_hint,
-                       status, semantic_risk, first_seen, last_seen)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       code_flow, status, semantic_risk, first_seen, last_seen)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (fp, f.rule_id, f.standard, f.severity, f.file, f.line, f.message,
                      f.analyzer, f.line_content, f.context_symbol, f.fix_hint,
+                     json.dumps(f.code_flow) if f.code_flow else None,
                      status, int(semantic_risk(f.rule_id, f.line_content)), now, now))
                 if status == "open":
                     diff["new"].append(fp)

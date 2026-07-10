@@ -70,6 +70,7 @@ class Finding:
     fingerprint: str = ""
     cross_refs: list[str] = field(default_factory=list)  # equivalent rules in other standards
     fix_hint: str = ""           # short remediation guidance for the agent
+    code_flow: list = field(default_factory=list)  # data-flow steps [{file,line,message}] from a qualified engine's SARIF codeFlows
 
     def __post_init__(self) -> None:
         if not self.fingerprint:

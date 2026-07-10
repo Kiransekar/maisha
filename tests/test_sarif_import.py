@@ -83,6 +83,56 @@ def test_own_sarif_export_roundtrips(tmp_path):
     assert exported and exported <= got
 
 
+def test_code_flow_survives_import_and_reexport(tmp_path):
+    """A qualified engine's data-flow path (codeFlows) must be preserved through
+    import -> briefing -> re-export, not silently dropped (backlog §7 richer map)."""
+    proj = tmp_path / "p"
+    (proj / "src").mkdir(parents=True)
+    res = _result("misra-c2012-21.3", "src/a.c", 30, "leak of allocated memory")
+    res["codeFlows"] = [{"threadFlows": [{"locations": [
+        {"location": {"physicalLocation": {"artifactLocation": {"uri": "src/a.c"},
+                                            "region": {"startLine": 10}},
+                      "message": {"text": "allocated here"}}},
+        {"location": {"physicalLocation": {"artifactLocation": {"uri": "src/a.c"},
+                                            "region": {"startLine": 30}},
+                      "message": {"text": "leaked here"}}},
+    ]}]}]
+    sf = proj / "ext.sarif"
+    sf.write_text(json.dumps(_sarif([res])))
+
+    eng = LoopEngine(proj)
+    eng.import_sarif(str(sf))
+    f = eng.mem.open_findings()[0]
+    flow = json.loads(f["code_flow"])
+    assert [s["line"] for s in flow] == [10, 30]
+    assert flow[0]["message"] == "allocated here"
+
+    # the agent briefing exposes the flow, and it round-trips back out to SARIF
+    doc = report_mod.sarif(eng.mem)
+    r = next(x for x in doc["runs"][0]["results"] if x["ruleId"] == "MISRA-C:2012 Rule 21.3")
+    steps = r["codeFlows"][0]["threadFlows"][0]["locations"]
+    assert [s["location"]["physicalLocation"]["region"]["startLine"] for s in steps] == [10, 30]
+
+
+def test_export_emits_cross_standard_relationships(tmp_path):
+    """Cross-standard equivalences are exported as SARIF rule relationships, and
+    every relationship target resolves to a descriptor in the same run."""
+    proj = tmp_path / "p"
+    (proj / "src").mkdir(parents=True)
+    sf = proj / "ext.sarif"
+    sf.write_text(json.dumps(_sarif([_result("misra-c2012-21.3", "src/a.c", 10, "dynamic memory")])))
+    eng = LoopEngine(proj)
+    eng.import_sarif(str(sf))
+
+    rules = report_mod.sarif(eng.mem)["runs"][0]["tool"]["driver"]["rules"]
+    by_id = {r["id"]: r for r in rules}
+    rel_owners = {rid: r for rid, r in by_id.items() if r.get("relationships")}
+    assert rel_owners, "no cross-standard relationships emitted"
+    for r in rel_owners.values():
+        for rel in r["relationships"]:
+            assert rel["target"]["id"] in by_id, "relationship target has no descriptor"
+
+
 if __name__ == "__main__":
     import sys
     import pytest

@@ -92,8 +92,31 @@ def parse_sarif(data: dict, root: Path) -> list[Finding]:
             findings.append(Finding(
                 rule_id=rid, standard=standard, severity=severity, file=uri, line=line,
                 column=col, message=msg, analyzer=f"sarif:{tool}",
-                line_content=line_content, fix_hint=fix, fingerprint=fp))
+                line_content=line_content, fix_hint=fix, fingerprint=fp,
+                code_flow=_parse_code_flows(res)))
     return findings
+
+
+def _parse_code_flows(res: dict) -> list[dict]:
+    """Flatten SARIF codeFlows -> threadFlows -> locations into an ordered list
+    of {file, line, message} steps. This is a qualified engine's core value-add
+    (the data-flow path to the defect); Maisha carries it through to the agent
+    briefing instead of dropping it. Only the first codeFlow is kept — engines
+    emit alternates but the primary path is what a fixer needs."""
+    steps: list[dict] = []
+    for cf in (res.get("codeFlows") or [])[:1]:
+        for tf in cf.get("threadFlows") or []:
+            for loc in tf.get("locations") or []:
+                inner = loc.get("location") or {}
+                pl = inner.get("physicalLocation") or {}
+                uri = (pl.get("artifactLocation") or {}).get("uri") or ""
+                region = pl.get("region") or {}
+                steps.append({
+                    "file": uri,
+                    "line": int(region.get("startLine") or 0),
+                    "message": (inner.get("message") or {}).get("text") or "",
+                })
+    return steps
 
 
 def _read_line(path: Path, line: int) -> str:
@@ -168,18 +191,34 @@ def markdown_report(mem: MemoryStore, project_name: str = "") -> str:
     return "\n".join(lines) + "\n"
 
 
+def _rule_descriptor(rid: str, fallback_msg: str = "") -> dict:
+    meta = REGISTRY.get(rid) or {}
+    return {
+        "id": rid,
+        "shortDescription": {"text": (meta.get("summary") or fallback_msg or rid)[:200]},
+        "help": {"text": meta.get("fix", "")},
+    }
+
+
+def _code_flows_to_sarif(steps: list[dict]) -> list[dict]:
+    return [{"threadFlows": [{"locations": [
+        {"location": {
+            "physicalLocation": {
+                "artifactLocation": {"uri": s.get("file", "")},
+                "region": {"startLine": max(1, int(s.get("line") or 1))},
+            },
+            "message": {"text": s.get("message", "")},
+        }} for s in steps]}]}]
+
+
 def sarif(mem: MemoryStore) -> dict:
     opens = mem.open_findings(limit=100000)
     rules_seen, results = {}, []
     for f in opens:
-        meta = REGISTRY.get(f["rule_id"]) or {}
         rid = f["rule_id"]
-        rules_seen.setdefault(rid, {
-            "id": rid,
-            "shortDescription": {"text": meta.get("summary", f["message"])[:200]},
-            "help": {"text": meta.get("fix", "")},
-        })
-        results.append({
+        rules_seen.setdefault(rid, _rule_descriptor(rid, f["message"]))
+        meta = REGISTRY.get(rid) or {}
+        result = {
             "ruleId": rid,
             "level": {"blocker": "error", "critical": "error",
                       "major": "warning", "minor": "note", "info": "note"}.get(f["severity"], "warning"),
@@ -188,9 +227,32 @@ def sarif(mem: MemoryStore) -> dict:
             "locations": [{
                 "physicalLocation": {
                     "artifactLocation": {"uri": f["file"]},
-                    "region": {"startLine": max(1, f["line"])},
+                    "region": {"startLine": max(1, f["line"]),
+                               **({"startColumn": f["column"]} if f.get("column") else {})},
                 }}],
-        })
+        }
+        # Carry an imported qualified-engine data-flow path back out, so an
+        # import -> export round-trip preserves it.
+        flow = f.get("code_flow")
+        if flow:
+            steps = json.loads(flow) if isinstance(flow, str) else flow
+            if steps:
+                result["codeFlows"] = _code_flows_to_sarif(steps)
+        results.append(result)
+
+    # Cross-standard equivalences as SARIF reportingDescriptor.relationships
+    # (e.g. MISRA 21.3 <-> its CERT equivalent). Referenced rules are added as
+    # descriptors so a consumer/re-import can resolve each relationship target.
+    for rid in list(rules_seen):
+        refs = REGISTRY.cross_refs(rid)
+        if not refs:
+            continue
+        rels = []
+        for ref in refs:
+            rules_seen.setdefault(ref, _rule_descriptor(ref))
+            rels.append({"target": {"id": ref}, "kinds": ["relevant"]})
+        rules_seen[rid]["relationships"] = rels
+
     return {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
