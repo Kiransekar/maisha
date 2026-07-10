@@ -3,6 +3,7 @@
 # Maisha
 
 [![CI](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml)
+&nbsp;[![Release](https://img.shields.io/badge/release-v0.2.0-blue)](https://github.com/Kiransekar/maisha/releases/tag/v0.2.0)
 &nbsp;![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 &nbsp;![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -43,7 +44,8 @@ does everything that must never hallucinate:
 - **Reporting** — per-standard compliance matrices, a markdown report with a
   deviation register, and SARIF 2.1.0 export with `partialFingerprints` for CI.
 
-The three rule knowledge bases (~80 rules) contain **original paraphrased
+The three rule knowledge bases (**81 rules** — 31 MISRA C:2012, 20 BARR-C:2018,
+30 CERT C) contain **original paraphrased
 summaries** written for this project — no standard text is reproduced. For
 authoritative wording you still need the official MISRA / BARR / SEI CERT documents.
 
@@ -67,7 +69,7 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
   qualification kit. DO-178C / ISO 26262 / IEC 62304 generally require the
   analysis tool *itself* to be qualified or proven-in-use; Maisha does not
   meet that bar and does not claim to.
-- **Not complete rule coverage.** ~80 curated rules across three standards is a
+- **Not complete rule coverage.** 81 curated rules across three standards is a
   fraction of MISRA C:2012 (180+ rules/directives with amendments) or CERT C.
   Detection is bounded by the underlying engines, not the curated set. Every
   covered rule and which analyzer backs it is listed in
