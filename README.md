@@ -42,7 +42,12 @@ does everything that must never hallucinate:
   or an explicit human approval confirms it; semantic-risk and high-severity
   findings always require human sign-off. See [below](#the-verification-gate).
 - **Reporting** — per-standard compliance matrices, a markdown report with a
-  deviation register, and SARIF 2.1.0 export with `partialFingerprints` for CI.
+  deviation register, SARIF 2.1.0 export with `partialFingerprints` for CI, and
+  a **MISRA Compliance:2020 Guideline Compliance Summary** — the artifact a
+  functional-safety assessor asks for: every enforced guideline classified
+  Compliant / Deviations / Violations, tied to deviation permits, with the
+  legality checks the framework mandates (a Mandatory guideline may not be
+  deviated) and honest disclosure of which guidelines are *not checked*.
 
 The three rule knowledge bases (**81 rules** — 31 MISRA C:2012, 20 BARR-C:2018,
 30 CERT C) contain **original paraphrased
@@ -159,10 +164,11 @@ maishac session status abc123
 
 maishac deviate "MISRA 19.2" --scope "drivers/**" \
     --justification "Union required for hardware register overlay mapping" \
-    --approver lead@example.com --expires-days 365
+    --approver lead@example.com --expires 2027-01-01
 maishac suppress <fingerprint> --reason "false positive: macro expansion"
 maishac note "This codebase uses FreeRTOS; heap_4 allocator is approved" --tags misra-21.3
 maishac report --format sarif > compliance.sarif
+maishac report --format misra-compliance > misra_compliance.md  # assessor deliverable
 ```
 
 ## Quickstart (any agentic IDE, via MCP)
@@ -210,7 +216,7 @@ The recommended agent protocol is documented in
 | `compliance_suppress_finding` | Mark a fingerprint as false positive (reason required) |
 | `memory_note` / `memory_search` / `memory_stats` | Project convention memory |
 | `compliance_import_sarif` | Ingest an external engine's SARIF (qualified engine or cppcheck `--output-format=sarif`) into the same loop/memory/gate |
-| `compliance_report` | Markdown, JSON or SARIF 2.1.0 |
+| `compliance_report` | Markdown, JSON, SARIF 2.1.0, or `misra-compliance` (MISRA Compliance:2020 Guideline Compliance Summary) |
 
 ## Architecture
 

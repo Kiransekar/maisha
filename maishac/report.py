@@ -262,3 +262,143 @@ def sarif(mem: MemoryStore) -> dict:
             "results": results,
         }],
     }
+
+
+# --------------------------------------------------------------------------
+# MISRA Compliance:2020 Guideline Compliance Summary (GCS)
+# --------------------------------------------------------------------------
+# The artifact a functional-safety assessor actually asks for: every enforced
+# guideline classified Compliant / Deviations / Violations, tied to deviation
+# permits, with the legality checks MISRA Compliance:2020 mandates (a Mandatory
+# guideline may NOT be deviated or disapplied; Required may be deviated;
+# Advisory may be deviated or disapplied). This is a *summary of recorded
+# evidence*, not a certification — see the disclaimer in the rendered report.
+
+_MISRA_STD = "MISRA-C:2012"
+# Approx size of the full guideline set (143 rules + 16 directives + Amendment
+# 1/2/3 security rules). Used only to state honest coverage, never to score.
+_MISRA_UNIVERSE = 175
+
+_STATUS_KEY = {"Compliant": "compliant", "Deviations": "deviations",
+               "Violations": "violations", "Pending verification": "pending"}
+
+
+def misra_compliance_summary(mem: MemoryStore) -> dict:
+    rows = [dict(r) for r in mem.db.execute(
+        "SELECT rule_id, status FROM findings WHERE standard=?", (_MISRA_STD,))]
+    dev_by_rule: dict[str, list] = {}
+    for d in mem.deviations():
+        dev_by_rule.setdefault(d["rule_id"], []).append(d)
+
+    enforced = REGISTRY.all_ids(_MISRA_STD)
+    guidelines, blocking = [], []
+    counts = {"compliant": 0, "deviations": 0, "violations": 0, "pending": 0}
+    for gid in enforced:
+        meta = REGISTRY.get(gid) or {}
+        cat = meta.get("category", "required")
+        gr = [r for r in rows if r["rule_id"] == gid]
+        open_v = sum(1 for r in gr if r["status"] in ("open", "regressed"))
+        pending = sum(1 for r in gr if r["status"] == "pending_verification")
+        deviated = sum(1 for r in gr if r["status"] == "deviated")
+        permits = dev_by_rule.get(gid, [])
+
+        if open_v:
+            status = "Violations"
+        elif pending:
+            status = "Pending verification"
+        elif deviated or permits:
+            status = "Deviations"
+        else:
+            status = "Compliant"
+
+        # A Mandatory guideline can be neither deviated nor left in violation.
+        is_blocking = cat == "mandatory" and status != "Compliant"
+        if is_blocking:
+            blocking.append(gid)
+        counts[_STATUS_KEY[status]] += 1
+        guidelines.append({
+            "guideline": gid, "category": cat, "status": status,
+            "open": open_v, "pending": pending, "deviated": deviated,
+            "permits": len(permits), "blocking": is_blocking,
+            "summary": meta.get("summary", ""),
+        })
+
+    if blocking:
+        verdict = "NON-COMPLIANT — a Mandatory guideline is violated or deviated"
+    elif counts["violations"]:
+        verdict = "NON-COMPLIANT — open violations without a deviation permit"
+    elif counts["pending"]:
+        verdict = "PENDING — fixes recorded but not yet verified"
+    elif counts["deviations"]:
+        verdict = "COMPLIANT WITH DEVIATIONS"
+    else:
+        verdict = "COMPLIANT"
+
+    return {
+        "standard": _MISRA_STD,
+        "verdict": verdict,
+        "enforced": len(enforced),
+        "not_checked": max(0, _MISRA_UNIVERSE - len(enforced)),
+        "universe": _MISRA_UNIVERSE,
+        "counts": counts,
+        "guidelines": guidelines,
+        "deviation_permits": mem.deviations(),
+        "blocking_guidelines": blocking,
+    }
+
+
+def misra_compliance_markdown(mem: MemoryStore, project_name: str = "") -> str:
+    s = misra_compliance_summary(mem)
+    c = s["counts"]
+    L = [
+        f"# MISRA C:2012 Guideline Compliance Summary{(' — ' + project_name) if project_name else ''}",
+        "",
+        f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')} · Standard: {s['standard']}"
+        " · Framework: MISRA Compliance:2020",
+        "",
+        f"## Verdict: **{s['verdict']}**",
+        "",
+        f"- Guidelines enforced by this configuration: **{s['enforced']}** of "
+        f"~{s['universe']} (Amendments included). **{s['not_checked']} not checked** "
+        "by Maisha — see coverage caveat below.",
+        f"- Compliant: **{c['compliant']}** · With deviations: **{c['deviations']}** · "
+        f"Pending verification: **{c['pending']}** · In violation: **{c['violations']}**",
+    ]
+    if s["blocking_guidelines"]:
+        L += ["", "> ⚠ **Audit-blocking:** Mandatory guideline(s) not compliant — "
+              f"{', '.join(s['blocking_guidelines'])}. MISRA Compliance:2020 permits "
+              "no deviation or disapplication of a Mandatory guideline."]
+
+    L += ["", "## Guideline compliance",
+          "", "| Guideline | Category | Status | Open | Pending | Deviated | Permits |",
+          "|---|---|---|---|---|---|---|"]
+    order = {"Violations": 0, "Pending verification": 1, "Deviations": 2, "Compliant": 3}
+    for g in sorted(s["guidelines"], key=lambda g: (order[g["status"]], g["guideline"])):
+        mark = "🚫 " if g["blocking"] else ""
+        L.append(f"| {g['guideline']} | {g['category']} | {mark}{g['status']} | "
+                 f"{g['open']} | {g['pending']} | {g['deviated']} | {g['permits']} |")
+
+    permits = s["deviation_permits"]
+    L += ["", "## Deviation permits", ""]
+    if not permits:
+        L.append("None on record.")
+    else:
+        L += ["| Guideline | Scope | Justification | Approver | Expires |",
+              "|---|---|---|---|---|"]
+        for d in permits:
+            exp = time.strftime("%Y-%m-%d", time.localtime(d["expires"])) if d.get("expires") else "—"
+            appr = d.get("approver") or "**UNAPPROVED**"
+            L.append(f"| {d['rule_id']} | `{d['scope']}` | {d['justification']} | {appr} | {exp} |")
+
+    L += ["", "---", "",
+          "*Coverage caveat:* Maisha enforces a curated subset of MISRA C:2012. "
+          "Guidelines it does not check are reported as \"not checked\", **not** as "
+          "compliant — for the remaining guidelines, layer a qualified engine's "
+          "findings via `maishac import` and re-run this report.",
+          "",
+          "*Disclaimer:* This is a summary of the evidence recorded in Maisha's "
+          "memory (findings, fixes, deviations, approvals). It is **not** a formal "
+          "compliance certification and Maisha is not a qualified/proven-in-use "
+          "analysis tool. Rule summaries are original paraphrases; consult the "
+          "official MISRA C:2012 and MISRA Compliance:2020 documents for normative wording."]
+    return "\n".join(L) + "\n"

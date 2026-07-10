@@ -323,13 +323,26 @@ class MemoryStore:
 
     # ------------------------------------------------------------ deviations
     def add_deviation(self, rule_id: str, scope: str, justification: str,
-                      approver: str = "", expires_days: float | None = None) -> str:
+                      approver: str = "", expires_days: float | None = None,
+                      expires_at: float | None = None) -> str:
         did = uuid.uuid4().hex[:12]
-        expires = time.time() + expires_days * 86400 if expires_days else None
+        expires = expires_at if expires_at is not None else (
+            time.time() + expires_days * 86400 if expires_days else None)
         self.db.execute(
             "INSERT INTO deviations (id, rule_id, scope, justification, approver, expires, ts)"
             " VALUES (?,?,?,?,?,?,?)",
             (did, rule_id, scope, justification, approver, expires, time.time()))
+        # Retroactively cover findings already on record that fall under this
+        # permit's scope, so a compliance report reflects the deviation now
+        # instead of only after the next rescan. (Expiry is reconciled at scan
+        # time by matching_deviation; ponytail: no scheduled re-open of expired
+        # permits — a rescan does it.)
+        for r in self.db.execute(
+                "SELECT fingerprint, file FROM findings WHERE rule_id=?"
+                " AND status IN ('open','regressed')", (rule_id,)).fetchall():
+            if fnmatch.fnmatch(r["file"], scope):
+                self.db.execute("UPDATE findings SET status='deviated' WHERE fingerprint=?",
+                                (r["fingerprint"],))
         self.db.commit()
         return did
 

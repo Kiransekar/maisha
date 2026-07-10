@@ -5,6 +5,27 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- **MISRA Compliance:2020 Guideline Compliance Summary** — a new report format
+  (`maishac report --format misra-compliance`, plus the MCP `compliance_report`
+  tool) that produces the artifact a functional-safety assessor actually asks
+  for: every enforced guideline classified Compliant / Deviations / Pending /
+  Violations, tied to deviation permits (scope, justification, approver,
+  expiry), with the legality checks the framework mandates (a Mandatory
+  guideline may not be deviated → flagged audit-blocking) and honest disclosure
+  of how many guidelines are enforced vs. *not checked* by this configuration.
+  Layer a qualified engine's findings via `maishac import` first for the
+  guidelines Maisha doesn't check natively.
+- `maishac deviate --expires YYYY-MM-DD` — record a deviation permit's expiry as
+  an absolute date (what an auditor thinks in), alongside the existing
+  `--expires-days`.
+
+### Fixed
+- Recording a deviation now retroactively re-buckets already-open findings that
+  fall under the permit's scope to `deviated`, so a compliance report reflects
+  the permit immediately instead of only after the next rescan (previously an
+  approved, on-record deviation could still show as an open violation).
+
 ## [0.2.0] - 2026-07-10
 
 ### Added

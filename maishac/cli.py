@@ -9,7 +9,7 @@
     maishac deviate "MISRA 21.6" -s "src/debug/*" -j "..."
     maishac suppress <fingerprint> -r "false positive because ..."
     maishac note "Use pool_alloc() instead of malloc" -t allocator
-    maishac report [--format markdown|json|sarif] [-o file]
+    maishac report [--format markdown|json|sarif|misra-compliance] [-o file]
     maishac import findings.sarif         ingest an external engine's SARIF
     maishac approve <fingerprint> --by me  human sign-off on a verified fix
     maishac serve                         run the MCP server (stdio)
@@ -21,6 +21,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from .engine import LoopEngine
@@ -107,8 +108,15 @@ def cmd_deviate(args):
     if not meta:
         print(f"Unknown rule '{args.rule}'", file=sys.stderr)
         sys.exit(1)
+    expires_at = None
+    if args.expires:
+        try:
+            expires_at = time.mktime(time.strptime(args.expires, "%Y-%m-%d"))
+        except ValueError:
+            print(f"--expires must be YYYY-MM-DD (got '{args.expires}')", file=sys.stderr)
+            sys.exit(1)
     did = eng.mem.add_deviation(meta["id"], args.scope, args.justification,
-                                args.approver, args.expires_days or None)
+                                args.approver, args.expires_days or None, expires_at)
     _print({"deviation_id": did, "rule_id": meta["id"]})
 
 
@@ -130,6 +138,8 @@ def cmd_report(args):
         text = json.dumps(report_mod.sarif(eng.mem), indent=2)
     elif args.format == "json":
         text = json.dumps(report_mod.compliance_matrix(eng.mem), indent=2)
+    elif args.format == "misra-compliance":
+        text = report_mod.misra_compliance_markdown(eng.mem, project_name=eng.root.name)
     else:
         text = report_mod.markdown_report(eng.mem, project_name=eng.root.name)
     if args.output:
@@ -208,7 +218,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--scope", "-s", default="*")
     s.add_argument("--justification", "-j", required=True)
     s.add_argument("--approver", default="")
-    s.add_argument("--expires-days", type=float, default=0)
+    s.add_argument("--expires", help="permit expiry as an absolute date, YYYY-MM-DD")
+    s.add_argument("--expires-days", type=float, default=0,
+                   help="permit lifetime in days from now (alternative to --expires)")
     s.set_defaults(fn=cmd_deviate)
 
     s = sub.add_parser("suppress", help="Suppress a false positive")
@@ -223,7 +235,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_note)
 
     s = sub.add_parser("report", help="Compliance report")
-    s.add_argument("--format", choices=["markdown", "json", "sarif"], default="markdown")
+    s.add_argument("--format", choices=["markdown", "json", "sarif", "misra-compliance"],
+                   default="markdown")
     s.add_argument("--output", "-o")
     s.set_defaults(fn=cmd_report)
 

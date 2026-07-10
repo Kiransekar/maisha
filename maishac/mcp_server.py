@@ -340,14 +340,17 @@ def compliance_report(format: str = "markdown") -> str:
     """Generate an auditable compliance report from memory.
 
     Args:
-        format: "markdown" (human review), "json" (matrix only) or
-            "sarif" (CI / IDE problem panes).
+        format: "markdown" (human review), "json" (matrix only),
+            "sarif" (CI / IDE problem panes), or "misra-compliance" (a MISRA
+            Compliance:2020 Guideline Compliance Summary — the assessor deliverable).
     """
     mem = _engine().mem
     if format == "sarif":
         return _j(report_mod.sarif(mem))
     if format == "json":
         return _j(report_mod.compliance_matrix(mem))
+    if format == "misra-compliance":
+        return report_mod.misra_compliance_markdown(mem, project_name=_engine().root.name)
     return report_mod.markdown_report(mem, project_name=_engine().root.name)
 
 
