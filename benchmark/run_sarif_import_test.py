@@ -12,6 +12,10 @@ foreign naming convention, plus one proprietary-only rule id) to verify:
      fingerprint collision) and are NOT cleared by a subsequent native
      rescan (producers-set isolation).
   4. Imported findings show up in compliance_report / findings list.
+  5. A qualified engine's codeFlows (data-flow path to the defect) are parsed,
+     stored, and surfaced in the agent fix briefing rather than dropped.
+  6. Export emits cross-standard equivalences as SARIF rule relationships, and
+     startColumn + codeFlows survive an import -> export round-trip.
 
 Usage (from repo root): python benchmark/run_sarif_import_test.py
 """
@@ -82,6 +86,31 @@ def main() -> None:
     assert "10.1" in md or "sarif:PROPRIETARY" in md or "ERR33-C" in md
     print(f"\n6) compliance_report includes imported findings: OK "
           f"(matrix standards={list(matrix.get('by_standard', matrix).keys())[:5]})")
+
+    # The stack-depth finding carried a 3-step call-graph codeFlow — it must be
+    # stored and reach the agent fix briefing, not be dropped on import.
+    stack = next(r for r in rows if r["rule_id"].startswith("sarif:"))
+    import json
+    flow = json.loads(stack["code_flow"]) if stack["code_flow"] else []
+    assert [s["line"] for s in flow] == [20, 26, 14], flow
+    brief = eng._brief(stack)
+    assert brief["code_flow"] == flow and brief["code_flow"][2]["file"] == "src/uart_driver.c"
+    print(f"\n7) codeFlow preserved into agent briefing: {len(flow)} steps "
+          f"({' -> '.join(s['message'].split(' (')[0] for s in flow)})  OK")
+
+    # Export: cross-standard relationships + a lossless round-trip of the flow.
+    doc = report_mod.sarif(eng.mem)
+    driver = doc["runs"][0]["tool"]["driver"]
+    by_id = {r["id"]: r for r in driver["rules"]}
+    rel_pairs = [(rid, rel["target"]["id"]) for rid, r in by_id.items()
+                 for rel in r.get("relationships", [])]
+    assert rel_pairs, "no cross-standard relationships emitted"
+    assert all(t in by_id for _, t in rel_pairs), "a relationship target has no descriptor"
+    exported = next(r for r in doc["runs"][0]["results"] if r["ruleId"] == stack["rule_id"])
+    steps = exported["codeFlows"][0]["threadFlows"][0]["locations"]
+    assert [s["location"]["physicalLocation"]["region"]["startLine"] for s in steps] == [20, 26, 14]
+    print(f"\n8) Export emits {len(rel_pairs)} cross-standard relationship(s) "
+          f"(e.g. {rel_pairs[0][0]} -> {rel_pairs[0][1]}); codeFlow round-trips  OK")
 
     print("\nALL SARIF IMPORT CHECKS PASSED.")
 

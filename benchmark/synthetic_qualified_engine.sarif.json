@@ -65,6 +65,19 @@
                 }
               }
             }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {"location": {"physicalLocation": {"artifactLocation": {"uri": "src/motor_control.c"}, "region": {"startLine": 20}}, "message": {"text": "enters motor_should_shutdown (96 bytes)"}}},
+                    {"location": {"physicalLocation": {"artifactLocation": {"uri": "src/motor_control.c"}, "region": {"startLine": 26}}, "message": {"text": "calls uart_log_fault (128 bytes)"}}},
+                    {"location": {"physicalLocation": {"artifactLocation": {"uri": "src/uart_driver.c"}, "region": {"startLine": 14}}, "message": {"text": "uart_log_fault frames strcpy (88 bytes) -> 312 total"}}}
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]

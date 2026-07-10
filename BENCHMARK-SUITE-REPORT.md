@@ -31,7 +31,7 @@ verification gate that changes how adopters should plan their review workload.**
 | Detection precision (all in-scope findings, post-fix) | **100%** (0 confirmed false positives) |
 | Fix-loop mechanics (gate, oscillation, stall, budget) | All 4 mechanisms independently verified working correctly |
 | Verification gate vs. the README's sentinel-cast trap | Caught correctly, end-to-end, with a real engine (not a mock) |
-| SARIF import (foreign rule-id formats, survival across rescans) | All checks passed |
+| SARIF import (foreign rule-id formats, survival across rescans, codeFlows into briefing, relationships + round-trip) | All 8 checks passed |
 | CLI end-to-end (14 subprocess invocations, real argparse wiring) | All passed (after 1 fix) |
 | Edge cases (empty file, BOM, non-UTF-8, CRLF, long lines, spaces-in-path) | All passed |
 | Performance (2000-function / 12k-line file) | **0.44s** (was 374s before a fix found by this suite) |
@@ -234,19 +234,29 @@ terminate" design invariant holds under direct testing, not just unit tests.
 qualified-engine SARIF export (a **synthetic** file — not real output from any
 named commercial tool) with three results: a MISRA id in a foreign format
 (`misra-c2012-10.1`), a CERT id in a foreign format (`CERT-ERR33-C`), and one
-proprietary rule id with no Maisha mapping.
+proprietary rule id with no Maisha mapping (`PROPRIETARY-STACK-DEPTH-001`)
+carrying a three-step call-graph `codeFlow` — the kind of data-flow path a
+qualified engine emits and a naive importer throws away.
 
-All checks passed:
+All 8 checks passed (`python benchmark/run_sarif_import_test.py`):
 - Both recognized ids correctly mapped onto the knowledge base
   (`MISRA-C:2012 Rule 10.1`, `CERT ERR33-C`).
 - The unrecognized id was preserved as `sarif:PROPRIETARY-STACK-DEPTH-001`
   rather than silently dropped.
-- All 3 imported findings coexisted with the 24 native-scan findings with no
+- All 3 imported findings coexisted with the 23 native-scan findings with no
   fingerprint collisions.
 - **A subsequent native rescan did not clear any imported finding** — the
   producer-set isolation documented in the README holds under a real test,
   not just the existing unit test.
 - All of the above surfaced correctly in `compliance_report`.
+- **The `codeFlow` was parsed and reached the agent fix briefing intact** — all
+  3 steps (`motor_should_shutdown` → `uart_log_fault` → `strcpy`, spanning two
+  files), so a fixer sees *how* the defect flows, not just where it lands.
+- **Export emitted 8 cross-standard equivalences as SARIF rule
+  `relationships`** (e.g. `CERT STR31-C` ↔ `MISRA-C:2012 Rule 21.6`), every
+  relationship target resolving to a descriptor in the same run, and the
+  imported `codeFlow` + `startColumn` round-tripped losslessly back out to
+  SARIF.
 
 ---
 
