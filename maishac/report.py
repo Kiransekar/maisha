@@ -257,7 +257,7 @@ def sarif(mem: MemoryStore) -> dict:
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
         "runs": [{
-            "tool": {"driver": {"name": "Maisha", "version": "0.1.0",
+            "tool": {"driver": {"name": "Maisha", "version": "0.2.0",
                                   "rules": list(rules_seen.values())}},
             "results": results,
         }],

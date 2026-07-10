@@ -5,7 +5,22 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-10
+
 ### Added
+- **Richer SARIF field mapping.** SARIF import/export is no longer lossy:
+  - Import parses a qualified engine's `codeFlows` → `threadFlows` →
+    `locations` into an ordered data-flow path (new `findings.code_flow`
+    column + migration) and surfaces it in the agent fix briefing, so a fixer
+    sees *how* a defect flows, not just where it lands.
+  - Export emits cross-standard equivalences as SARIF
+    `reportingDescriptor.relationships` (e.g. a MISRA rule linked to its CERT
+    equivalent), with every relationship target added as a descriptor so it
+    resolves.
+  - `startColumn` and imported `codeFlows` now survive an import → export
+    round-trip, alongside the existing `maishac/v1` `partialFingerprints`
+    identity. Benchmarked end-to-end (`run_sarif_import_test.py`, 8/8 checks;
+    see `BENCHMARK-SUITE-REPORT.md` §4).
 - **Full benchmark suite** (`benchmark/`, see `BENCHMARK-SUITE-REPORT.md`) —
   7 hand-annotated synthetic fixtures (100% seeded-defect recall, 100%
   precision after fixes), a real multi-analyzer install (cppcheck +
