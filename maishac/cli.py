@@ -1,6 +1,7 @@
 """Maisha command line interface.
 
     maishac scan src/                     scan + sync memory
+    maishac guide "dynamic memory"        author-time: the compliant idiom to reach for
     maishac check draft.c                 lint a draft in memory (no store); '-' = stdin
     maishac findings --limit 20           list open findings
     maishac rule "MISRA 21.3"             explain a rule
@@ -49,6 +50,11 @@ def cmd_check(args):
     code = sys.stdin.read() if args.file in ("-", None) else Path(args.file).read_text("utf-8")
     name = "draft.c" if args.file in ("-", None) else args.file
     _print(eng.check_snippet(code, name))
+
+
+def cmd_guide(args):
+    eng = _engine(args)
+    _print(eng.guidance(args.topic, args.limit))
 
 
 def cmd_findings(args):
@@ -192,6 +198,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("file", nargs="?", default="-",
                    help="C file to check, or '-'/omitted to read stdin")
     s.set_defaults(fn=cmd_check)
+
+    s = sub.add_parser("guide", help="Author-time guidance: the compliant idiom to "
+                                     "reach for BEFORE writing code on a topic")
+    s.add_argument("topic", help='e.g. "dynamic memory", "string copy", "switch", "recursion"')
+    s.add_argument("--limit", type=int, default=5)
+    s.set_defaults(fn=cmd_guide)
 
     s = sub.add_parser("rule", help="Explain a rule")
     s.add_argument("rule")

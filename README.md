@@ -25,11 +25,22 @@ does everything that must never hallucinate:
   for `cppcheck` (with its MISRA addon) and `clang-tidy` (`cert-*` checks). Findings
   from multiple analyzers that hit the same defect are fingerprint-merged into a
   single finding with reinforcing evidence (`analyzer: native+cppcheck`).
-- **Proactive authoring aid** — `compliance_check_snippet` (CLI: `maishac check`)
-  lints a draft *in memory, before it is written to a file*, returning violations
-  and fix hints so an agent can write the compliant version on the first pass
-  rather than fixing it on a later scan. (Native lexical checks only — the
-  syntactic subset, not whole-program rules.)
+- **Proactive authoring (write it compliant the first time)** — two author-time
+  surfaces, so an agent writes compliant code on the first pass instead of fixing
+  it on a later scan:
+  - `compliance_guidance` (CLI: `maishac guide "<topic>"`) — a compliant-pattern
+    library: *before* writing code for a concern (dynamic memory, string copy,
+    switch, recursion, integer overflow, …) it returns the idiom to **prefer**,
+    the anti-pattern to **avoid**, **why**, and the MISRA/CERT/BARR-C rules it
+    satisfies.
+  - `compliance_check_snippet` (CLI: `maishac check`) — lints a draft *in memory,
+    before it is written to a file*, returning violations, fix hints, and the
+    compliant idiom to swap in. (Native lexical checks only — the syntactic
+    subset, not whole-program rules; a clean snippet is not a compliance
+    guarantee.)
+
+  See [`AUTHORING_PLAYBOOK.md`](AUTHORING_PLAYBOOK.md) for the guidance → draft →
+  check → rewrite protocol to hand your IDE agent.
 - **Stable fingerprints** — findings are identified by
   `sha1(rule + file + normalized line content + enclosing function)`, *not* line
   numbers, so they survive edits, insertions and refactors across sessions.
@@ -211,7 +222,8 @@ The recommended agent protocol is documented in
 | `compliance_get_finding` | Full briefing for one fingerprint (history, failed strategies, notes) |
 | `compliance_explain_rule` | Rule summary, severity, fix hint, cross-standard equivalents |
 | `compliance_search_rules` | Keyword search across all three standards |
-| `compliance_check_snippet` | Lint a draft snippet **in memory, before writing it** — proactive authoring aid; returns violations + fix hints, stores nothing |
+| `compliance_guidance` | **Before** writing code on a concern, get the compliant idiom to reach for (avoid/prefer/why + the rules it satisfies) — the author-time pattern library |
+| `compliance_check_snippet` | Lint a draft snippet **in memory, before writing it** — proactive authoring aid; returns violations, fix hints, and the compliant idiom to swap in; stores nothing |
 | `compliance_begin_session` | Baseline scan + session with budgets (`max_iterations`, `batch_size`) |
 | `compliance_next_batch` | Next prioritized batch, regressions first, with per-finding briefings |
 | `compliance_record_attempt` | Log the strategy used on a finding (auto-graded on verify) |

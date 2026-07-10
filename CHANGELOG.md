@@ -6,6 +6,17 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **Author-time compliant-pattern library (Mode 1)** — a curated set of
+  recurring embedded-C authoring concerns (`maishac/patterns.py`: dynamic
+  memory, fixed-width types, recursion, checked returns, string buffers,
+  string→number, control-flow braces, switch default, boolean/assignment
+  conditions, null checks, integer conversion/overflow, format strings, bounded
+  loops, goto), each cross-linked to the MISRA/CERT/BARR-C rules it satisfies.
+  Exposed proactively via `compliance_guidance` (MCP) / `maishac guide "<topic>"`
+  (CLI) — get the idiom to *prefer*, the anti-pattern to *avoid*, and *why*,
+  before writing code — and attached to `check_snippet` findings so the reactive
+  path also shows the compliant idiom to swap in. New `AUTHORING_PLAYBOOK.md`
+  documents the guidance → draft → check → rewrite loop for an IDE agent.
 - **Proactive authoring aid** — `compliance_check_snippet` MCP tool and
   `maishac check <file|->` CLI lint a draft C snippet *in memory, before it is
   written to a file*, returning violations + fix hints so an agent writes the

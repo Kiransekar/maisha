@@ -133,6 +133,24 @@ def compliance_search_rules(query: str, limit: int = 10) -> str:
 
 
 @mcp.tool()
+def compliance_guidance(topic: str, limit: int = 5) -> str:
+    """Proactive author-time guidance: BEFORE you write C for a given concern,
+    get the compliant idiom to reach for. Returns, per matching pattern, the
+    anti-pattern to AVOID, the idiom to PREFER (a code sample), WHY, and the
+    MISRA/CERT/BARR-C rules it satisfies.
+
+    Call this while planning code — e.g. topic="dynamic memory", "string copy",
+    "check return value", "switch", "recursion", "integer overflow", "loop" —
+    so the first draft is compliant instead of being fixed on a later scan.
+
+    Args:
+        topic: What you're about to write (a concern, keyword, or rule id).
+        limit: Max patterns to return (default 5).
+    """
+    return _j(_engine().guidance(topic, limit))
+
+
+@mcp.tool()
 def compliance_check_snippet(code: str, filename: str = "draft.c") -> str:
     """Lint a draft C snippet for MISRA/BARR-C/CERT violations IN MEMORY, before
     you write it to a file. Nothing is scanned or stored. Call this while

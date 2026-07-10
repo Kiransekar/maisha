@@ -130,18 +130,34 @@ class LoopEngine:
         not the whole-program rules. Each finding carries a fix hint so the
         agent can rewrite the line compliantly on the spot."""
         from ..analyzers.native import NativeAnalyzer
+        from .. import patterns as patterns_mod
         findings = NativeAnalyzer().analyze_source(code, filename, self.root)
-        return {
-            "filename": filename,
-            "clean": not findings,
-            "findings": [{
+
+        def _brief_finding(f):
+            pats = patterns_mod.for_rule(f.rule_id)
+            out = {
                 "rule_id": f.rule_id, "standard": f.standard, "severity": f.severity,
                 "line": f.line, "message": f.message,
                 "fix_hint": f.fix_hint or (REGISTRY.get(f.rule_id) or {}).get("fix", ""),
                 "rule_summary": (REGISTRY.get(f.rule_id) or {}).get("summary", ""),
                 "equivalent_rules": f.cross_refs,
-            } for f in findings],
+            }
+            if pats:  # teach the compliant idiom, not just the violation
+                out["compliant_pattern"] = {"prefer": pats[0]["prefer"], "why": pats[0]["why"]}
+            return out
+
+        return {
+            "filename": filename,
+            "clean": not findings,
+            "findings": [_brief_finding(f) for f in findings],
         }
+
+    def guidance(self, topic: str, limit: int = 5) -> dict:
+        """Proactive author-time lookup: given what you're about to write, return
+        the compliant idioms to reach for (avoid/prefer/why + the rules each
+        satisfies). Use BEFORE writing, so the code is compliant on first draft."""
+        from .. import patterns as patterns_mod
+        return {"topic": topic, "patterns": patterns_mod.guidance(topic, limit)}
 
     @staticmethod
     def _policy(cfg: dict) -> str:
