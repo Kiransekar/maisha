@@ -93,8 +93,23 @@ def parse_sarif(data: dict, root: Path) -> list[Finding]:
                 rule_id=rid, standard=standard, severity=severity, file=uri, line=line,
                 column=col, message=msg, analyzer=f"sarif:{tool}",
                 line_content=line_content, fix_hint=fix, fingerprint=fp,
-                code_flow=_parse_code_flows(res)))
+                code_flow=_parse_code_flows(res), suppression=_parse_suppression(res)))
     return findings
+
+
+def _parse_suppression(res: dict) -> dict:
+    """Read SARIF result.suppressions. A result is suppressed unless every
+    entry is explicitly rejected (SARIF 2.1.0 §3.27.23). Returns {justification,
+    kind} for a carried-over suppression, or {} if the result is live."""
+    supps = res.get("suppressions")
+    if not supps:
+        return {}
+    active = [s for s in supps if (s.get("status") or "accepted") != "rejected"]
+    if not active:
+        return {}
+    just = "; ".join(s["justification"] for s in active
+                     if s.get("justification")) or "suppressed in imported SARIF"
+    return {"justification": just, "kind": active[0].get("kind", "")}
 
 
 def _parse_code_flows(res: dict) -> list[dict]:

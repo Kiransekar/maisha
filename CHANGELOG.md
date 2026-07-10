@@ -6,6 +6,19 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **Proactive authoring aid** — `compliance_check_snippet` MCP tool and
+  `maishac check <file|->` CLI lint a draft C snippet *in memory, before it is
+  written to a file*, returning violations + fix hints so an agent writes the
+  compliant version on the first pass instead of fixing it on a later scan.
+  Nothing is scanned or stored; native lexical checks only (the syntactic
+  subset, not whole-program rules). This is the first *proactive* surface —
+  the rest of the harness is reactive (scan → fix → verify).
+- **Bring-your-own-triage on SARIF import** — `import_sarif` now honors
+  `result.suppressions` (SARIF 2.1.0 §3.27.23): a finding a qualified engine
+  already marked suppressed/baselined is imported as *suppressed* with its
+  justification preserved, instead of resurfacing as a fresh open violation. A
+  `rejected` suppression does not suppress. Import result reports
+  `suppressions_carried`.
 - **MISRA Compliance:2020 Guideline Compliance Summary** — a new report format
   (`maishac report --format misra-compliance`, plus the MCP `compliance_report`
   tool) that produces the artifact a functional-safety assessor actually asks

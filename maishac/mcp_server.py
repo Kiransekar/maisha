@@ -132,6 +132,26 @@ def compliance_search_rules(query: str, limit: int = 10) -> str:
     return _j(REGISTRY.search(query, limit))
 
 
+@mcp.tool()
+def compliance_check_snippet(code: str, filename: str = "draft.c") -> str:
+    """Lint a draft C snippet for MISRA/BARR-C/CERT violations IN MEMORY, before
+    you write it to a file. Nothing is scanned or stored. Call this while
+    authoring new code so you can rewrite non-compliant lines on the spot
+    instead of finding them on a later scan.
+
+    Native (lexical) checks only — this catches the syntactic subset (dynamic
+    allocation, recursion, magic numbers, unbraced bodies, banned functions,
+    ...), not whole-program rules that need a build model. Each finding carries
+    a fix hint. A clean result is NOT a compliance guarantee; run a full scan
+    (and, for certification, a qualified engine) on the committed file.
+
+    Args:
+        code: The C source text you intend to write.
+        filename: Name to attribute findings to (affects nothing but labels).
+    """
+    return _j(_engine().check_snippet(code, filename))
+
+
 # --------------------------------------------------------------- the loop
 @mcp.tool()
 def compliance_begin_session(paths: list[str], max_iterations: int = 10,

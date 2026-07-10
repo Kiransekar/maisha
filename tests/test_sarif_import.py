@@ -114,6 +114,34 @@ def test_code_flow_survives_import_and_reexport(tmp_path):
     assert [s["location"]["physicalLocation"]["region"]["startLine"] for s in steps] == [10, 30]
 
 
+def test_import_carries_existing_triage_via_suppressions(tmp_path):
+    """Bring-your-own-triage: a SARIF result the engine already marked suppressed
+    imports as suppressed (justification kept), not as a fresh open violation. A
+    rejected suppression does not suppress."""
+    proj = tmp_path / "p"
+    (proj / "src").mkdir(parents=True)
+    live = _result("misra-c2012-21.3", "src/a.c", 10, "dynamic memory")
+    baselined = _result("misra-c2012-15.6", "src/legacy.c", 88, "unbraced body")
+    baselined["suppressions"] = [{"kind": "external", "status": "accepted",
+                                  "justification": "deviation permit DP-042"}]
+    rejected = _result("cert-err33-c", "src/b.c", 5, "ignored return")
+    rejected["suppressions"] = [{"kind": "inSource", "status": "rejected"}]
+    sf = proj / "triaged.sarif"
+    sf.write_text(json.dumps(_sarif([live, baselined, rejected])))
+
+    eng = LoopEngine(proj)
+    out = eng.import_sarif(str(sf))
+    assert out["imported"] == 3 and out["suppressions_carried"] == 1
+
+    open_rules = {f["rule_id"] for f in eng.mem.open_findings(limit=100)}
+    assert "MISRA-C:2012 Rule 21.3" in open_rules      # live -> open
+    assert "CERT ERR33-C" in open_rules                # rejected suppression -> still open
+    assert "MISRA-C:2012 Rule 15.6" not in open_rules  # accepted suppression -> not open
+    # justification is preserved on the suppression record
+    supp_reasons = [r["reason"] for r in eng.mem.db.execute("SELECT reason FROM suppressions")]
+    assert any("DP-042" in r for r in supp_reasons)
+
+
 def test_export_emits_cross_standard_relationships(tmp_path):
     """Cross-standard equivalences are exported as SARIF rule relationships, and
     every relationship target resolves to a descriptor in the same run."""

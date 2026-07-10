@@ -135,6 +135,11 @@ class NativeAnalyzer(Analyzer):
             findings.extend(self._analyze_file(f, src, root))
         return findings
 
+    def analyze_source(self, code: str, filename: str, root: Path) -> list[Finding]:
+        """Analyze an in-memory source string (never touches disk) — the entry
+        point for proactively linting a draft before it is written to a file."""
+        return self._analyze_file(root / filename, code, root)
+
     # ---------------------------------------------------------------- helpers
     def _mk(self, rule_query: str, f: Path, root: Path, lineno: int,
             lines: list[str], msg: str) -> Finding | None:

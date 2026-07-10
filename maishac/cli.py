@@ -1,6 +1,7 @@
 """Maisha command line interface.
 
     maishac scan src/                     scan + sync memory
+    maishac check draft.c                 lint a draft in memory (no store); '-' = stdin
     maishac findings --limit 20           list open findings
     maishac rule "MISRA 21.3"             explain a rule
     maishac session begin src/            start an engineered fix session
@@ -41,6 +42,13 @@ def cmd_scan(args):
     eng = _engine(args)
     _print(eng.scan(args.paths, args.analyzers.split(",") if args.analyzers else None,
                     include_paths=args.include))
+
+
+def cmd_check(args):
+    eng = _engine(args)
+    code = sys.stdin.read() if args.file in ("-", None) else Path(args.file).read_text("utf-8")
+    name = "draft.c" if args.file in ("-", None) else args.file
+    _print(eng.check_snippet(code, name))
 
 
 def cmd_findings(args):
@@ -178,6 +186,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--limit", type=int, default=50)
     s.add_argument("--json", action="store_true")
     s.set_defaults(fn=cmd_findings)
+
+    s = sub.add_parser("check", help="Lint a draft snippet in memory (no scan/store) "
+                                     "for proactive authoring; reads a file or stdin")
+    s.add_argument("file", nargs="?", default="-",
+                   help="C file to check, or '-'/omitted to read stdin")
+    s.set_defaults(fn=cmd_check)
 
     s = sub.add_parser("rule", help="Explain a rule")
     s.add_argument("rule")

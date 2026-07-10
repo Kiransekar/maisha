@@ -25,6 +25,11 @@ does everything that must never hallucinate:
   for `cppcheck` (with its MISRA addon) and `clang-tidy` (`cert-*` checks). Findings
   from multiple analyzers that hit the same defect are fingerprint-merged into a
   single finding with reinforcing evidence (`analyzer: native+cppcheck`).
+- **Proactive authoring aid** — `compliance_check_snippet` (CLI: `maishac check`)
+  lints a draft *in memory, before it is written to a file*, returning violations
+  and fix hints so an agent can write the compliant version on the first pass
+  rather than fixing it on a later scan. (Native lexical checks only — the
+  syntactic subset, not whole-program rules.)
 - **Stable fingerprints** — findings are identified by
   `sha1(rule + file + normalized line content + enclosing function)`, *not* line
   numbers, so they survive edits, insertions and refactors across sessions.
@@ -206,6 +211,7 @@ The recommended agent protocol is documented in
 | `compliance_get_finding` | Full briefing for one fingerprint (history, failed strategies, notes) |
 | `compliance_explain_rule` | Rule summary, severity, fix hint, cross-standard equivalents |
 | `compliance_search_rules` | Keyword search across all three standards |
+| `compliance_check_snippet` | Lint a draft snippet **in memory, before writing it** — proactive authoring aid; returns violations + fix hints, stores nothing |
 | `compliance_begin_session` | Baseline scan + session with budgets (`max_iterations`, `batch_size`) |
 | `compliance_next_batch` | Next prioritized batch, regressions first, with per-finding briefings |
 | `compliance_record_attempt` | Log the strategy used on a finding (auto-graded on verify) |
@@ -215,7 +221,7 @@ The recommended agent protocol is documented in
 | `compliance_add_deviation` | MISRA-style deviation record (justification ≥ 15 chars enforced) |
 | `compliance_suppress_finding` | Mark a fingerprint as false positive (reason required) |
 | `memory_note` / `memory_search` / `memory_stats` | Project convention memory |
-| `compliance_import_sarif` | Ingest an external engine's SARIF (qualified engine or cppcheck `--output-format=sarif`) into the same loop/memory/gate |
+| `compliance_import_sarif` | Ingest an external engine's SARIF (qualified engine or cppcheck `--output-format=sarif`) into the same loop/memory/gate; **honors `result.suppressions`** so a team's existing triage/baseline carries over instead of resurfacing as fresh violations |
 | `compliance_report` | Markdown, JSON, SARIF 2.1.0, or `misra-compliance` (MISRA Compliance:2020 Guideline Compliance Summary) |
 
 ## Architecture

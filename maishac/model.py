@@ -71,6 +71,7 @@ class Finding:
     cross_refs: list[str] = field(default_factory=list)  # equivalent rules in other standards
     fix_hint: str = ""           # short remediation guidance for the agent
     code_flow: list = field(default_factory=list)  # data-flow steps [{file,line,message}] from a qualified engine's SARIF codeFlows
+    suppression: dict = field(default_factory=dict)  # {justification, kind} if an imported SARIF result was already suppressed/baselined
 
     def __post_init__(self) -> None:
         if not self.fingerprint:

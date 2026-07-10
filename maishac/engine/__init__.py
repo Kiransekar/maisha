@@ -94,18 +94,53 @@ class LoopEngine:
         """Ingest findings from an external SARIF file (e.g. a qualified engine
         like Helix QAC / Polyspace, or cppcheck's own --sarif output) into the
         same memory/loop/gate machinery as a native scan. Imported findings are
-        not cleared by native rescans (see sync_scan producers)."""
+        not cleared by native rescans (see sync_scan producers).
+
+        SARIF ``result.suppressions`` are honored: a finding the engine already
+        marked suppressed/baselined is imported as *suppressed* (with its
+        justification preserved) rather than resurfacing as a fresh violation —
+        this is how a team brings its existing triage across."""
         from .. import report as report_mod
         data = json.loads(Path(path).read_text("utf-8"))
         findings = report_mod.parse_sarif(data, self.root)
+        # Pre-record incoming suppressions so sync_scan buckets them as
+        # suppressed instead of new/open (bring-your-own-triage).
+        carried = 0
+        for f in findings:
+            if f.suppression:
+                self.mem.suppress(f.fingerprint, f.suppression.get("justification")
+                                  or "suppressed in imported SARIF")
+                carried += 1
         diff = self.mem.sync_scan(findings, [], producers=set())
         tools = sorted({f.analyzer for f in findings})
         return {
             "source": str(path),
             "tools": tools,
             "imported": len(findings),
+            "suppressions_carried": carried,
             "diff": {k: len(v) for k, v in diff.items()},
             "open": len(self.mem.open_findings(limit=100000)),
+        }
+
+    def check_snippet(self, code: str, filename: str = "draft.c") -> dict:
+        """Proactively lint a draft source string in memory — no scan record,
+        no memory writes — so an agent can self-correct *before* writing to a
+        file. Native (lexical) checks only: cppcheck/clang-tidy need a real file
+        and build model, so this catches the syntactic MISRA/CERT/BARR subset,
+        not the whole-program rules. Each finding carries a fix hint so the
+        agent can rewrite the line compliantly on the spot."""
+        from ..analyzers.native import NativeAnalyzer
+        findings = NativeAnalyzer().analyze_source(code, filename, self.root)
+        return {
+            "filename": filename,
+            "clean": not findings,
+            "findings": [{
+                "rule_id": f.rule_id, "standard": f.standard, "severity": f.severity,
+                "line": f.line, "message": f.message,
+                "fix_hint": f.fix_hint or (REGISTRY.get(f.rule_id) or {}).get("fix", ""),
+                "rule_summary": (REGISTRY.get(f.rule_id) or {}).get("summary", ""),
+                "equivalent_rules": f.cross_refs,
+            } for f in findings],
         }
 
     @staticmethod
