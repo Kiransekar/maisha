@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maishac"
-version = "0.3.0"
+version = "0.3.1"
 description = "Agent harness for MISRA C, BARR-C and CERT C compliance: persistent memory, engineered fix loops, and an MCP server usable from any agentic IDE."
 readme = "README.md"
 requires-python = ">=3.10"

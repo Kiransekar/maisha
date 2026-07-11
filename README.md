@@ -3,7 +3,7 @@
 # Maisha
 
 [![CI](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml)
-&nbsp;[![Release](https://img.shields.io/badge/release-v0.3.0-blue)](https://github.com/Kiransekar/maisha/releases/tag/v0.3.0)
+&nbsp;[![Release](https://img.shields.io/badge/release-v0.3.1-blue)](https://github.com/Kiransekar/maisha/releases/tag/v0.3.1)
 &nbsp;![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 &nbsp;![License: MIT](https://img.shields.io/badge/license-MIT-green)
 

@@ -5,6 +5,13 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-11
+
+### Fixed
+- Release workflow: restore `contents: read` — declaring `permissions:` for
+  Trusted Publishing replaced the runner token's defaults, which broke the
+  `checkout` step. First PyPI-publishing release.
+
 ## [0.3.0] - 2026-07-11
 
 ### Added
