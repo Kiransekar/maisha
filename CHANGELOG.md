@@ -6,6 +6,14 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **Positioning as the open-source compliance-workflow alternative** —
+  `COMPARISON.md`, an honest, evidence-grounded feature matrix vs. the
+  proprietary tools (Polyspace, Helix QAC, Coverity, Parasoft, CodeSonar), their
+  new agentic toolkits, and free engines alone. Stakes the defensible claim:
+  Maisha is the free, vendor-neutral *workflow layer* (fix loop, verification
+  gate, deviation/evidence workflow, author-time guidance) — not a qualified
+  detection engine — that runs on free engines or layers on a qualified one via
+  SARIF. README hero repositioned to match.
 - **Open-source adoption scaffolding** — `CONTRIBUTING.md` (how to add a rule,
   an authoring pattern, or an analyzer/SARIF-dialect adapter, plus the design
   invariants to preserve), `CODE_OF_CONDUCT.md` (Contributor Covenant), GitHub

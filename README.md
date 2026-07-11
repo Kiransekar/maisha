@@ -7,7 +7,15 @@
 &nbsp;![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 &nbsp;![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-**An agent harness for MISRA C:2012, BARR-C:2018 and CERT C compliance — usable from any agentic IDE.**
+**The open-source compliance-workflow layer for MISRA C:2012, BARR-C:2018 and CERT C — usable from any agentic IDE.**
+
+Maisha is the free, vendor-neutral alternative to the paid compliance *workflow*
+that tools like Polyspace, Helix QAC, Coverity and Parasoft now sell as agentic
+toolkits: the fix loop, verification gate, deviation & audit-evidence workflow,
+and author-time guidance — running on free engines (cppcheck + clang-tidy) **or**
+layered on top of a qualified engine you already own (via SARIF). It is *not* a
+qualified detection engine and does not pretend to be. → See
+[**How Maisha compares**](COMPARISON.md).
 
 > *Maisha* is Swahili for **"life."** Compliance standards like MISRA and CERT C
 > exist because this is the software that flies planes, drives cars and runs
