@@ -6,6 +6,14 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **Open-source adoption scaffolding** — `CONTRIBUTING.md` (how to add a rule,
+  an authoring pattern, or an analyzer/SARIF-dialect adapter, plus the design
+  invariants to preserve), `CODE_OF_CONDUCT.md` (Contributor Covenant), GitHub
+  issue templates (bug + rule/pattern request) and a PR template, PyPI packaging
+  metadata (`project.urls` + classifiers), and a tag-triggered
+  `release.yml` workflow that publishes to PyPI via Trusted Publishing (OIDC, no
+  token). README now leads with `pipx install maishac`. Package builds clean
+  (sdist + wheel) and the installed wheel ships the rule KB + patterns.
 - **Author-time compliant-pattern library (Mode 1)** — 37 recurring embedded-C
   authoring concerns (`maishac/patterns.py`: dynamic memory & free discipline,
   fixed-width types, recursion, checked returns, string buffers, string→number,

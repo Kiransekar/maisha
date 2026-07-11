@@ -133,13 +133,19 @@ loses nothing.
 Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/Kiransekar/maisha.git
-cd maisha
-pip install .                 # or: pip install -e ".[dev]" for development (adds pytest)
+pipx install maishac      # isolated CLI install (recommended)
+# or
+pip install maishac
 ```
 
-This installs the `maishac` CLI (entry point defined in `pyproject.toml`) and
-the `maishac` Python package. Verify with `maishac --help`.
+This installs the `maishac` CLI and the `maishac` Python package. Verify with
+`maishac --help`. To hack on Maisha itself:
+
+```bash
+git clone https://github.com/Kiransekar/maisha.git
+cd maisha
+pip install -e ".[dev]"   # editable install with pytest
+```
 
 Optional but strongly recommended external analyzers — native works with
 zero dependencies, but cppcheck (MISRA addon) and clang-tidy (`cert-*`
@@ -329,6 +335,15 @@ pip install -e . && python -m pytest tests/ -q
 
 `examples/bad.c` is a deliberately non-compliant fixture exercising ~18 rules —
 useful as a demo target.
+
+## Contributing
+
+Contributions are very welcome — especially to the community-extensible parts:
+adding a coding-standard **rule**, an authoring **pattern** (compliant idiom), or
+an **analyzer adapter** / SARIF-dialect mapping. None of these touch the engine.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the how-to and the design invariants
+to preserve, and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). Good first issues are
+labeled on the tracker.
 
 ## License / disclaimer
 

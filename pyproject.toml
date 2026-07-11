@@ -11,9 +11,25 @@ requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Maisha contributors" }]
 keywords = ["misra", "cert-c", "barr-c", "static-analysis", "mcp", "agent", "embedded"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Embedded Systems",
+    "Environment :: Console",
+]
 dependencies = [
     "mcp>=1.2.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Kiransekar/maisha"
+Repository = "https://github.com/Kiransekar/maisha"
+Issues = "https://github.com/Kiransekar/maisha/issues"
+Changelog = "https://github.com/Kiransekar/maisha/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
