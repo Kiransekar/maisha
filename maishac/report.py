@@ -295,7 +295,8 @@ _MISRA_STD = "MISRA-C:2012"
 _MISRA_UNIVERSE = 175
 
 _STATUS_KEY = {"Compliant": "compliant", "Deviations": "deviations",
-               "Violations": "violations", "Pending verification": "pending"}
+               "Violations": "violations", "Pending verification": "pending",
+               "Disapplied": "disapplied"}
 
 
 def misra_compliance_summary(mem: MemoryStore) -> dict:
@@ -304,20 +305,27 @@ def misra_compliance_summary(mem: MemoryStore) -> dict:
     dev_by_rule: dict[str, list] = {}
     for d in mem.deviations():
         dev_by_rule.setdefault(d["rule_id"], []).append(d)
+    recats = mem.recategorizations()  # GRP: rule_id -> {to_category, ...}
 
     enforced = REGISTRY.all_ids(_MISRA_STD)
     guidelines, blocking = [], []
-    counts = {"compliant": 0, "deviations": 0, "violations": 0, "pending": 0}
+    counts = {"compliant": 0, "deviations": 0, "violations": 0, "pending": 0, "disapplied": 0}
     for gid in enforced:
         meta = REGISTRY.get(gid) or {}
-        cat = meta.get("category", "required")
+        base_cat = meta.get("category", "required")
+        recat = recats.get(gid)
+        cat = recat["to_category"] if recat else base_cat  # effective category (post-GRP)
         gr = [r for r in rows if r["rule_id"] == gid]
         open_v = sum(1 for r in gr if r["status"] in ("open", "regressed"))
         pending = sum(1 for r in gr if r["status"] == "pending_verification")
         deviated = sum(1 for r in gr if r["status"] == "deviated")
         permits = dev_by_rule.get(gid, [])
 
-        if open_v:
+        if cat == "disapplied":
+            # Removed from the compliance argument by an agreed GRP entry;
+            # violations are neither counted nor blocking.
+            status = "Disapplied"
+        elif open_v:
             status = "Violations"
         elif pending:
             status = "Pending verification"
@@ -326,13 +334,14 @@ def misra_compliance_summary(mem: MemoryStore) -> dict:
         else:
             status = "Compliant"
 
-        # A Mandatory guideline can be neither deviated nor left in violation.
-        is_blocking = cat == "mandatory" and status != "Compliant"
+        # A Mandatory guideline (post-GRP) can be neither deviated nor left in violation.
+        is_blocking = cat == "mandatory" and status not in ("Compliant",)
         if is_blocking:
             blocking.append(gid)
         counts[_STATUS_KEY[status]] += 1
         guidelines.append({
-            "guideline": gid, "category": cat, "status": status,
+            "guideline": gid, "category": cat, "base_category": base_cat,
+            "recategorized": bool(recat), "status": status,
             "open": open_v, "pending": pending, "deviated": deviated,
             "permits": len(permits), "blocking": is_blocking,
             "summary": meta.get("summary", ""),
@@ -358,6 +367,7 @@ def misra_compliance_summary(mem: MemoryStore) -> dict:
         "counts": counts,
         "guidelines": guidelines,
         "deviation_permits": mem.deviations(),
+        "recategorizations": list(recats.values()),
         "blocking_guidelines": blocking,
     }
 
@@ -377,7 +387,8 @@ def misra_compliance_markdown(mem: MemoryStore, project_name: str = "") -> str:
         f"~{s['universe']} (Amendments included). **{s['not_checked']} not checked** "
         "by Maisha — see coverage caveat below.",
         f"- Compliant: **{c['compliant']}** · With deviations: **{c['deviations']}** · "
-        f"Pending verification: **{c['pending']}** · In violation: **{c['violations']}**",
+        f"Pending verification: **{c['pending']}** · In violation: **{c['violations']}** · "
+        f"Disapplied (GRP): **{c['disapplied']}**",
     ]
     if s["blocking_guidelines"]:
         L += ["", "> ⚠ **Audit-blocking:** Mandatory guideline(s) not compliant — "
@@ -387,10 +398,12 @@ def misra_compliance_markdown(mem: MemoryStore, project_name: str = "") -> str:
     L += ["", "## Guideline compliance",
           "", "| Guideline | Category | Status | Open | Pending | Deviated | Permits |",
           "|---|---|---|---|---|---|---|"]
-    order = {"Violations": 0, "Pending verification": 1, "Deviations": 2, "Compliant": 3}
+    order = {"Violations": 0, "Pending verification": 1, "Deviations": 2,
+             "Disapplied": 3, "Compliant": 4}
     for g in sorted(s["guidelines"], key=lambda g: (order[g["status"]], g["guideline"])):
         mark = "🚫 " if g["blocking"] else ""
-        L.append(f"| {g['guideline']} | {g['category']} | {mark}{g['status']} | "
+        cat = g["category"] + (" *(re-cat)*" if g["recategorized"] else "")
+        L.append(f"| {g['guideline']} | {cat} | {mark}{g['status']} | "
                  f"{g['open']} | {g['pending']} | {g['deviated']} | {g['permits']} |")
 
     permits = s["deviation_permits"]
@@ -416,4 +429,130 @@ def misra_compliance_markdown(mem: MemoryStore, project_name: str = "") -> str:
           "compliance certification and Maisha is not a qualified/proven-in-use "
           "analysis tool. Rule summaries are original paraphrases; consult the "
           "official MISRA C:2012 and MISRA Compliance:2020 documents for normative wording."]
+    return "\n".join(L) + "\n"
+
+
+# --------------------------------------------------------------------------
+# Guideline Enforcement Plan (GEP) — MISRA Compliance:2020 §3.3
+# --------------------------------------------------------------------------
+# "A GEP listing each guideline ... shall indicate how compliance is to be
+# checked" and, for each tool, record its version, config, options, and evidence
+# it can detect the guidelines it checks. Maisha generates this over the
+# guidelines it enforces, records the live tool inventory, and honestly flags
+# the remainder of the standard as requiring a separately-assigned method.
+
+def enforcement_tools(mem: MemoryStore) -> list[dict]:
+    """The tool inventory for the GEP: every static-analysis tool that could be
+    enforcing guidelines here — Maisha's active analyzers (with live versions +
+    options) plus any external engine whose SARIF was imported into memory."""
+    from .analyzers import available_analyzers
+    tools = [{
+        "tool": a.name, "version": a.version(), "options": a.options,
+        "kind": "native" if a.requires is None else "external analyzer",
+    } for a in available_analyzers()]
+    # engines whose findings arrived via `maishac import` (analyzer = "sarif:<tool>")
+    imported = sorted({r["analyzer"] for r in mem.db.execute(
+        "SELECT DISTINCT analyzer FROM findings WHERE analyzer LIKE 'sarif:%'")})
+    for a in imported:
+        tools.append({"tool": a.split("sarif:", 1)[1], "version": "(from imported SARIF)",
+                      "options": "imported via SARIF 2.1.0", "kind": "imported qualified engine"})
+    return tools
+
+
+def guideline_enforcement_plan(mem: MemoryStore) -> dict:
+    summary = misra_compliance_summary(mem)
+    tools = enforcement_tools(mem)
+    tool_names = [t["tool"] for t in tools]
+    # which guidelines have an observed detection in this project (strong evidence)
+    observed = {r["rule_id"] for r in mem.db.execute(
+        "SELECT DISTINCT rule_id FROM findings WHERE standard=?", (_MISRA_STD,))}
+    rows = []
+    for g in summary["guidelines"]:
+        gid = g["guideline"]
+        rows.append({
+            "guideline": gid, "category": g["category"],
+            "method": "Static analysis",
+            "checked_by": tool_names,
+            "evidence": "observed in project" if gid in observed else "configured (tooling covers it)",
+        })
+    return {"standard": _MISRA_STD, "tools": tools, "guidelines": rows,
+            "enforced": summary["enforced"], "not_checked": summary["not_checked"],
+            "universe": summary["universe"]}
+
+
+def guideline_enforcement_markdown(mem: MemoryStore, project_name: str = "") -> str:
+    gep = guideline_enforcement_plan(mem)
+    L = [
+        f"# MISRA C:2012 Guideline Enforcement Plan (GEP){(' — ' + project_name) if project_name else ''}",
+        "",
+        f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')} · Standard: {gep['standard']}"
+        " · Framework: MISRA Compliance:2020 §3.3",
+        "",
+        "## Enforcement tools",
+        "",
+        "| Tool | Version | Options | Role |",
+        "|---|---|---|---|",
+    ]
+    for t in gep["tools"]:
+        L.append(f"| {t['tool']} | {t['version']} | {t['options']} | {t['kind']} |")
+    if not gep["tools"]:
+        L.append("| _(none active)_ | | | |")
+
+    L += ["", "## Per-guideline enforcement", "",
+          f"This plan covers the **{gep['enforced']}** guidelines Maisha enforces. "
+          f"The remaining **{gep['not_checked']}** of ~{gep['universe']} MISRA C:2012 "
+          "guidelines are **not covered by this plan** and must be assigned an "
+          "enforcement method (compiler, an additional/qualified tool, or manual "
+          "review) — layer a qualified engine's SARIF via `maishac import` to extend "
+          "coverage, then regenerate.",
+          "",
+          "| Guideline | Category | Method | Checked by | Detection evidence |",
+          "|---|---|---|---|---|"]
+    for r in sorted(gep["guidelines"], key=lambda r: r["guideline"]):
+        L.append(f"| {r['guideline']} | {r['category']} | {r['method']} | "
+                 f"{', '.join(r['checked_by']) or '—'} | {r['evidence']} |")
+
+    L += ["", "---", "",
+          "*Detection evidence:* \"observed in project\" means at least one violation "
+          "of that guideline was produced by the tooling on this codebase. Maisha's "
+          "own regression tests and `examples/bad.c` provide standing evidence that "
+          "the native analyzer detects the guidelines it claims.",
+          "",
+          "*Disclaimer:* Maisha is a workflow/orchestration layer, not a "
+          "qualified/proven-in-use analysis tool. For tool-qualification evidence "
+          "(ISO 26262, DO-330, IEC 61508), the qualified engine you layer via SARIF "
+          "is the qualified component; record its qualification artifacts alongside "
+          "this plan."]
+    return "\n".join(L) + "\n"
+
+
+# --------------------------------------------------------------------------
+# Guideline Re-categorization Plan (GRP) — MISRA Compliance:2020 §5.4
+# --------------------------------------------------------------------------
+
+def guideline_recategorization_markdown(mem: MemoryStore, project_name: str = "") -> str:
+    recats = mem.recategorizations()
+    L = [
+        f"# MISRA C:2012 Guideline Re-categorization Plan (GRP){(' — ' + project_name) if project_name else ''}",
+        "",
+        f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')} · Standard: {_MISRA_STD}"
+        " · Framework: MISRA Compliance:2020 §5.4",
+        "",
+        "Agreed re-categorizations for this project. MISRA permits: Advisory → "
+        "Mandatory/Required/Disapplied; Required → Mandatory only; a **Mandatory "
+        "guideline may not be re-categorized in any way**. Maisha enforces these "
+        "rules when a re-categorization is recorded (`maishac recategorize`).",
+        "",
+    ]
+    if not recats:
+        L.append("No re-categorizations on record — every guideline retains its "
+                 "default MISRA category.")
+        return "\n".join(L) + "\n"
+    L += ["| Guideline | Original category | Re-categorized to | Rationale | Approver |",
+          "|---|---|---|---|---|"]
+    for gid, r in recats.items():
+        meta = REGISTRY.get(gid) or {}
+        base = meta.get("category", "—")
+        appr = r.get("approver") or "**UNAPPROVED**"
+        L.append(f"| {gid} | {base} | {r['to_category']} | {r['rationale']} | {appr} |")
     return "\n".join(L) + "\n"

@@ -177,6 +177,38 @@ class LoopEngine:
         return {"ran": True, "passed": proc.returncode == 0, "exit_code": proc.returncode,
                 "command": cmd, "output_tail": (proc.stdout + proc.stderr)[-2000:]}
 
+    # MISRA Compliance:2020 §5.4: which re-categorizations are permitted, keyed
+    # by the guideline's *original* category. A Mandatory guideline may not be
+    # re-categorized at all; a Required guideline may not become Advisory or
+    # Disapplied (only Mandatory); Advisory may go anywhere.
+    _GRP_ALLOWED = {
+        "mandatory": set(),
+        "required": {"mandatory"},
+        "advisory": {"mandatory", "required", "disapplied"},
+    }
+
+    def recategorize(self, rule: str, to_category: str, rationale: str,
+                     approver: str = "") -> dict:
+        """Record a GRP re-categorization, enforcing MISRA's legality rules."""
+        meta = REGISTRY.resolve(rule)
+        if not meta:
+            return {"error": f"Unknown rule '{rule}'"}
+        target = (to_category or "").strip().lower()
+        valid = {"mandatory", "required", "advisory", "disapplied"}
+        if target not in valid:
+            return {"error": f"to_category must be one of {sorted(valid)} (got '{to_category}')"}
+        if not (rationale or "").strip():
+            return {"error": "a rationale is required for a re-categorization"}
+        current = (meta.get("category") or "required").lower()
+        if target != current and target not in self._GRP_ALLOWED.get(current, set()):
+            return {"error": f"MISRA Compliance:2020 forbids re-categorizing a "
+                             f"{current.capitalize()} guideline to {target.capitalize()} "
+                             f"({meta['id']}). Allowed from {current}: "
+                             f"{sorted(self._GRP_ALLOWED.get(current, set())) or 'none'}."}
+        self.mem.add_recategorization(meta["id"], target, rationale.strip(), approver.strip())
+        return {"rule_id": meta["id"], "from_category": current, "to_category": target,
+                "approver": approver.strip() or None}
+
     def approve(self, fingerprint: str, approved_by: str) -> dict:
         if not (approved_by or "").strip():
             return {"error": "approved_by is required — record who signed off on this fix."}

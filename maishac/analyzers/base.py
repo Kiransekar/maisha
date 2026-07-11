@@ -39,9 +39,22 @@ def collect_c_files(paths: list[str], root: Path) -> list[Path]:
 class Analyzer(ABC):
     name: str = "base"
     requires: str | None = None  # executable dependency, if any
+    options: str = ""            # invocation options Maisha uses (for the GEP tool record)
 
     def available(self) -> bool:
         return self.requires is None or shutil.which(self.requires) is not None
+
+    def version(self) -> str:
+        """Version string of the underlying tool, for the Guideline Enforcement
+        Plan's tool record. Best-effort; '<name> --version' first line."""
+        if self.requires is None:
+            return "built-in"
+        try:
+            proc = self._run([self.requires, "--version"], timeout=10)
+            first = (proc.stdout or proc.stderr).strip().splitlines()
+            return first[0].strip() if first else "unknown"
+        except Exception:  # noqa: BLE001 — a missing/odd tool must not break the GEP
+            return "unknown"
 
     @abstractmethod
     def analyze(self, files: list[Path], root: Path,

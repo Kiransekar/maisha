@@ -321,6 +321,26 @@ def compliance_add_deviation(rule: str, scope: str, justification: str,
 
 
 @mcp.tool()
+def compliance_recategorize(rule: str, to_category: str, rationale: str,
+                            approver: str = "") -> str:
+    """Record a MISRA Guideline Re-categorization Plan (GRP) entry — an agreed,
+    project-wide change to a guideline's category. Legality is enforced per MISRA
+    Compliance:2020: Advisory → Mandatory/Required/Disapplied; Required →
+    Mandatory only; a Mandatory guideline may not be re-categorized at all. The
+    new category flows into the compliance summary (a Disapplied guideline is
+    removed from the compliance argument; a Mandatory one can no longer be
+    deviated). Show it with compliance_report(format="grp").
+
+    Args:
+        rule: Rule reference, e.g. "MISRA 15.5".
+        to_category: mandatory | required | advisory | disapplied.
+        rationale: Why (agreed between acquirer and supplier). Required.
+        approver: Person/role approving the re-categorization.
+    """
+    return _j(_engine().recategorize(rule, to_category, rationale, approver))
+
+
+@mcp.tool()
 def compliance_suppress_finding(fingerprint: str, reason: str) -> str:
     """Mark one specific finding as a false positive. Requires a reason;
     suppressions are permanent for that fingerprint and audited.
@@ -379,17 +399,25 @@ def compliance_report(format: str = "markdown") -> str:
 
     Args:
         format: "markdown" (human review), "json" (matrix only),
-            "sarif" (CI / IDE problem panes), or "misra-compliance" (a MISRA
-            Compliance:2020 Guideline Compliance Summary — the assessor deliverable).
+            "sarif" (CI / IDE problem panes), "misra-compliance" (a MISRA
+            Compliance:2020 Guideline Compliance Summary), "gep" (Guideline
+            Enforcement Plan — how each guideline is checked + the tool inventory),
+            or "grp" (Guideline Re-categorization Plan). GEP+GRP+GCS are the three
+            MISRA Compliance:2020 evidence documents an assessor asks for.
     """
     mem = _engine().mem
+    name = _engine().root.name
     if format == "sarif":
         return _j(report_mod.sarif(mem))
     if format == "json":
         return _j(report_mod.compliance_matrix(mem))
     if format == "misra-compliance":
-        return report_mod.misra_compliance_markdown(mem, project_name=_engine().root.name)
-    return report_mod.markdown_report(mem, project_name=_engine().root.name)
+        return report_mod.misra_compliance_markdown(mem, project_name=name)
+    if format == "gep":
+        return report_mod.guideline_enforcement_markdown(mem, project_name=name)
+    if format == "grp":
+        return report_mod.guideline_recategorization_markdown(mem, project_name=name)
+    return report_mod.markdown_report(mem, project_name=name)
 
 
 def main() -> None:

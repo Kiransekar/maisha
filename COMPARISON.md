@@ -33,7 +33,7 @@ Legend: ✓ yes · ◑ partial · ✗ no · ⤴ via layering (import the paid en
 | **Agentic fix loop (any IDE via MCP)** | ✓ engine-agnostic | ✗ | ✗ | ◑ locked to own engine |
 | **Verification gate** (fix not "resolved" on a clean rescan alone) | ✓ + human/test sign-off, oscillation freeze | ✗ | ◑ re-analysis | ◑ re-analysis |
 | **Deviation permits / justification workflow** | ✓ 5-element records, approver, expiry | ✗ | ◑ | ◑ justification catalog |
-| **MISRA Compliance:2020 evidence (GEP / GRP / GCS)** | ◑ GCS today; GEP/GRP on roadmap | ✗ | ◑ report only | ✗ |
+| **MISRA Compliance:2020 evidence (GEP / GRP / GCS)** | ✓ all three (GEP + GRP + GCS), with GRP legality enforced | ✗ | ◑ report only | ✗ |
 | **Author-time proactive guidance** (compliant idiom before you write) | ✓ 37-pattern library, `guide`/`check` | ✗ | ✗ | ◑ fix suggestions |
 | **Persistent project memory** (findings survive edits, track lifecycle) | ✓ fingerprint-stable | ✗ | ◑ | ◑ |
 | **Runs fully offline / on-prem, no data leaves** | ✓ | ✓ | ◑ | depends |

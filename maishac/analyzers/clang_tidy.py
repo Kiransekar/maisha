@@ -28,6 +28,7 @@ _CERT_CHECK = re.compile(r"cert-([a-z]{3}\d{2})-c")
 class ClangTidyAnalyzer(Analyzer):
     name = "clang-tidy"
     requires = "clang-tidy"
+    options = "--checks=-*,cert-*,bugprone-*,clang-analyzer-* (CERT C checks)"
 
     def analyze(self, files: list[Path], root: Path,
                 include_paths: list[str] | None = None) -> list[Finding]:

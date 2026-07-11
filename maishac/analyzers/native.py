@@ -122,6 +122,11 @@ def _next_significant(lines: list[str], start_idx: int) -> str | None:
 class NativeAnalyzer(Analyzer):
     name = "native"
     requires = None
+    options = "zero-dependency lexical checks (MISRA/BARR-C/CERT subset)"
+
+    def version(self) -> str:
+        from .. import __version__
+        return f"maishac {__version__}"
 
     def analyze(self, files: list[Path], root: Path,
                 include_paths: list[str] | None = None) -> list[Finding]:

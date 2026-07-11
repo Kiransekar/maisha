@@ -6,6 +6,19 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **Complete MISRA Compliance:2020 evidence set — GEP + GRP** (joining the
+  existing GCS). `maishac report --format gep` produces a **Guideline
+  Enforcement Plan**: a live tool inventory (each analyzer's version + options,
+  plus any imported qualified engine), a per-guideline enforcement method with
+  detection evidence (observed-in-project vs. configured), and honest disclosure
+  of the guidelines *not* covered. `maishac recategorize` / `compliance_recategorize`
+  records a **Guideline Re-categorization Plan** with MISRA's legality rules
+  enforced (a Mandatory guideline may not be re-categorized; a Required one may
+  not become Advisory or Disapplied), and `--format grp` renders it. A
+  re-categorization flows into the compliance summary: a Disapplied guideline is
+  removed from the compliance argument (no longer a violation); a re-categorized
+  Mandatory guideline updates the audit-blocking check. New `recategorizations`
+  table + `Analyzer.version()`/`options` for the tool inventory.
 - **Positioning as the open-source compliance-workflow alternative** —
   `COMPARISON.md`, an honest, evidence-grounded feature matrix vs. the
   proprietary tools (Polyspace, Helix QAC, Coverity, Parasoft, CodeSonar), their

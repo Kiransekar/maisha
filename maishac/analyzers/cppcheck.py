@@ -42,6 +42,7 @@ _MISRA_ID = re.compile(r"misra-c2012-(\d+\.\d+)")
 class CppcheckAnalyzer(Analyzer):
     name = "cppcheck"
     requires = "cppcheck"
+    options = "--addon=misra --enable=all (MISRA C:2012 addon)"
 
     def analyze(self, files: list[Path], root: Path,
                 include_paths: list[str] | None = None) -> list[Finding]:

@@ -67,11 +67,15 @@ does everything that must never hallucinate:
   findings always require human sign-off. See [below](#the-verification-gate).
 - **Reporting** — per-standard compliance matrices, a markdown report with a
   deviation register, SARIF 2.1.0 export with `partialFingerprints` for CI, and
-  a **MISRA Compliance:2020 Guideline Compliance Summary** — the artifact a
-  functional-safety assessor asks for: every enforced guideline classified
-  Compliant / Deviations / Violations, tied to deviation permits, with the
-  legality checks the framework mandates (a Mandatory guideline may not be
-  deviated) and honest disclosure of which guidelines are *not checked*.
+  the **MISRA Compliance:2020 evidence set** — the three documents a
+  functional-safety assessor asks for: the **Guideline Compliance Summary**
+  (every guideline Compliant / Deviations / Violations / Disapplied, tied to
+  deviation permits), the **Guideline Enforcement Plan** (how each guideline is
+  checked + a tool inventory with versions/options), and the **Guideline
+  Re-categorization Plan** (with the legality rules enforced — a Mandatory
+  guideline may not be re-categorized, a Required one may not drop to
+  Advisory/Disapplied), plus honest disclosure of which guidelines are *not
+  checked*.
 
 The three rule knowledge bases (**81 rules** — 31 MISRA C:2012, 20 BARR-C:2018,
 30 CERT C) contain **original paraphrased
@@ -197,8 +201,13 @@ maishac deviate "MISRA 19.2" --scope "drivers/**" \
     --approver lead@example.com --expires 2027-01-01
 maishac suppress <fingerprint> --reason "false positive: macro expansion"
 maishac note "This codebase uses FreeRTOS; heap_4 allocator is approved" --tags misra-21.3
+maishac recategorize "MISRA 15.1" --to disapplied \
+    --rationale "No goto in this codebase; disapplied by acquirer/supplier agreement" \
+    --approver lead@example.com
 maishac report --format sarif > compliance.sarif
-maishac report --format misra-compliance > misra_compliance.md  # assessor deliverable
+maishac report --format misra-compliance > gcs.md   # Guideline Compliance Summary
+maishac report --format gep > gep.md                 # Guideline Enforcement Plan
+maishac report --format grp > grp.md                 # Guideline Re-categorization Plan
 ```
 
 ## Quickstart (any agentic IDE, via MCP)
@@ -245,10 +254,11 @@ The recommended agent protocol is documented in
 | `compliance_approve_finding` | Human sign-off moving a `pending_verification` finding to `resolved` (required for semantic-risk / high-severity fixes) |
 | `compliance_session_status` | Progress, iteration budget, state (`active`/`awaiting_verification`/`converged`/`stalled`/`budget_exhausted`) |
 | `compliance_add_deviation` | MISRA-style deviation record (justification ≥ 15 chars enforced) |
+| `compliance_recategorize` | MISRA GRP re-categorization (legality enforced: no Mandatory re-cat; Required→Advisory/Disapplied forbidden) |
 | `compliance_suppress_finding` | Mark a fingerprint as false positive (reason required) |
 | `memory_note` / `memory_search` / `memory_stats` | Project convention memory |
 | `compliance_import_sarif` | Ingest an external engine's SARIF (qualified engine or cppcheck `--output-format=sarif`) into the same loop/memory/gate; **honors `result.suppressions`** so a team's existing triage/baseline carries over instead of resurfacing as fresh violations |
-| `compliance_report` | Markdown, JSON, SARIF 2.1.0, or `misra-compliance` (MISRA Compliance:2020 Guideline Compliance Summary) |
+| `compliance_report` | Markdown, JSON, SARIF 2.1.0, or the MISRA Compliance:2020 evidence set: `misra-compliance` (GCS), `gep` (enforcement plan), `grp` (re-categorization plan) |
 
 ## Architecture
 

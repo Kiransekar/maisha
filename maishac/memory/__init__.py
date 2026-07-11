@@ -97,6 +97,13 @@ CREATE TABLE IF NOT EXISTS suppressions (
   reason TEXT NOT NULL,
   ts REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS recategorizations (
+  rule_id TEXT PRIMARY KEY,
+  to_category TEXT NOT NULL,          -- mandatory|required|advisory|disapplied (GRP target)
+  rationale TEXT NOT NULL,
+  approver TEXT,
+  ts REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
   topic TEXT,
@@ -357,6 +364,21 @@ class MemoryStore:
 
     def deviations(self) -> list[dict]:
         return [dict(r) for r in self.db.execute("SELECT * FROM deviations ORDER BY ts")]
+
+    # ------------------------------------------------- GRP (re-categorization)
+    def add_recategorization(self, rule_id: str, to_category: str,
+                             rationale: str, approver: str = "") -> None:
+        """Record a Guideline Re-categorization Plan entry. Legality (which
+        moves MISRA permits) is enforced by the caller (engine.recategorize)."""
+        self.db.execute(
+            "INSERT OR REPLACE INTO recategorizations (rule_id, to_category, rationale, approver, ts)"
+            " VALUES (?,?,?,?,?)",
+            (rule_id, to_category, rationale, approver, time.time()))
+        self.db.commit()
+
+    def recategorizations(self) -> dict[str, dict]:
+        return {r["rule_id"]: dict(r)
+                for r in self.db.execute("SELECT * FROM recategorizations ORDER BY rule_id")}
 
     # ----------------------------------------------------------- suppressions
     def suppress(self, fingerprint: str, reason: str) -> None:

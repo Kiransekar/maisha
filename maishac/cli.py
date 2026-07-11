@@ -11,7 +11,8 @@
     maishac deviate "MISRA 21.6" -s "src/debug/*" -j "..."
     maishac suppress <fingerprint> -r "false positive because ..."
     maishac note "Use pool_alloc() instead of malloc" -t allocator
-    maishac report [--format markdown|json|sarif|misra-compliance] [-o file]
+    maishac recategorize "MISRA 15.5" --to advisory -r "..."   MISRA GRP entry
+    maishac report [--format markdown|json|sarif|misra-compliance|gep|grp] [-o file]
     maishac import findings.sarif         ingest an external engine's SARIF
     maishac approve <fingerprint> --by me  human sign-off on a verified fix
     maishac serve                         run the MCP server (stdio)
@@ -55,6 +56,15 @@ def cmd_check(args):
 def cmd_guide(args):
     eng = _engine(args)
     _print(eng.guidance(args.topic, args.limit))
+
+
+def cmd_recategorize(args):
+    eng = _engine(args)
+    out = eng.recategorize(args.rule, args.to, args.rationale, args.approver)
+    if "error" in out:
+        print(out["error"], file=sys.stderr)
+        sys.exit(1)
+    _print(out)
 
 
 def cmd_findings(args):
@@ -154,6 +164,10 @@ def cmd_report(args):
         text = json.dumps(report_mod.compliance_matrix(eng.mem), indent=2)
     elif args.format == "misra-compliance":
         text = report_mod.misra_compliance_markdown(eng.mem, project_name=eng.root.name)
+    elif args.format == "gep":
+        text = report_mod.guideline_enforcement_markdown(eng.mem, project_name=eng.root.name)
+    elif args.format == "grp":
+        text = report_mod.guideline_recategorization_markdown(eng.mem, project_name=eng.root.name)
     else:
         text = report_mod.markdown_report(eng.mem, project_name=eng.root.name)
     if args.output:
@@ -204,6 +218,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("topic", help='e.g. "dynamic memory", "string copy", "switch", "recursion"')
     s.add_argument("--limit", type=int, default=5)
     s.set_defaults(fn=cmd_guide)
+
+    s = sub.add_parser("recategorize", help="Record a MISRA Guideline Re-categorization "
+                                            "Plan (GRP) entry (legality enforced)")
+    s.add_argument("rule", help='e.g. "MISRA 15.5"')
+    s.add_argument("--to", required=True,
+                   choices=["mandatory", "required", "advisory", "disapplied"],
+                   help="target category")
+    s.add_argument("--rationale", "-r", required=True, help="why (agreed by acquirer/supplier)")
+    s.add_argument("--approver", default="")
+    s.set_defaults(fn=cmd_recategorize)
 
     s = sub.add_parser("rule", help="Explain a rule")
     s.add_argument("rule")
@@ -261,7 +285,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(fn=cmd_note)
 
     s = sub.add_parser("report", help="Compliance report")
-    s.add_argument("--format", choices=["markdown", "json", "sarif", "misra-compliance"],
+    s.add_argument("--format",
+                   choices=["markdown", "json", "sarif", "misra-compliance", "gep", "grp"],
                    default="markdown")
     s.add_argument("--output", "-o")
     s.set_defaults(fn=cmd_report)
