@@ -5,7 +5,18 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-11
+
 ### Added
+- **SARIF importer hardened for real qualified-engine dialects.** Resolves a
+  result's rule via `result.rule` / `ruleIndex` / `ruleId` (not just `ruleId`),
+  and — crucially — recovers the MISRA/CERT guideline when the tool emits a
+  checker-specific `ruleId` (e.g. Helix QAC `ABV.GENERAL`) by following the
+  rule's `relationships` into a `taxonomies` component, plus result-level `taxa`.
+  Also: honors `defaultConfiguration.level`, skips non-defect results
+  (`kind: pass`/`notApplicable`/…) and baseline-`absent` findings, tolerates
+  missing regions / multi-location / no-location results, and normalizes
+  scheme-prefixed (`file://`) URIs. 7 new dialect regression tests.
 - **Complete MISRA Compliance:2020 evidence set — GEP + GRP** (joining the
   existing GCS). `maishac report --format gep` produces a **Guideline
   Enforcement Plan**: a live tool inventory (each analyzer's version + options,

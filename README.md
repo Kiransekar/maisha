@@ -3,7 +3,7 @@
 # Maisha
 
 [![CI](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml)
-&nbsp;[![Release](https://img.shields.io/badge/release-v0.2.0-blue)](https://github.com/Kiransekar/maisha/releases/tag/v0.2.0)
+&nbsp;[![Release](https://img.shields.io/badge/release-v0.3.0-blue)](https://github.com/Kiransekar/maisha/releases/tag/v0.3.0)
 &nbsp;![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 &nbsp;![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -128,15 +128,26 @@ loop, memory, verification gate and deviation register on top of their findings 
 recognized MISRA/CERT ruleIds map onto the knowledge base, and imported findings
 are never cleared by a native rescan.
 
+**Robust across real engine dialects.** Qualified engines rarely put the
+MISRA/CERT number in `ruleId` — Helix QAC / Coverity emit a checker-specific id
+(e.g. `ABV.GENERAL`), reference the rule by `ruleIndex`, and attach the guideline
+through `relationships` into a `taxonomies` component. Maisha's importer resolves
+the rule via `result.rule` / `ruleIndex` / `ruleId`, follows relationships and
+taxonomies (and result-level `taxa`) to recover the real guideline, honors
+`defaultConfiguration` levels, skips non-defect results (`kind: pass`,
+`notApplicable`) and baseline-`absent` findings, tolerates missing regions and
+multi-location results, and normalizes scheme-prefixed URIs.
+
 **Rich SARIF mapping.** Import isn't lossy: a qualified engine's `codeFlows`
 (the data-flow path *to* the defect) are parsed and surfaced in the agent
-briefing, so a fixer sees how a defect flows, not just where it lands. Export
-emits cross-standard equivalences as SARIF `reportingDescriptor.relationships`
-(e.g. a MISRA rule linked to its CERT equivalent), with every relationship
-target present as a descriptor. Maisha's own identity travels in
-`partialFingerprints` (`maishac/v1`), and `startColumn` + code flows survive an
-import → export round-trip, so re-exporting a qualified engine's findings
-loses nothing.
+briefing, so a fixer sees how a defect flows, not just where it lands; and
+`result.suppressions` are honored so a team's existing triage/baseline carries
+over instead of resurfacing as fresh violations. Export emits cross-standard
+equivalences as SARIF `reportingDescriptor.relationships` (e.g. a MISRA rule
+linked to its CERT equivalent), with every relationship target present as a
+descriptor. Maisha's own identity travels in `partialFingerprints`
+(`maishac/v1`), and `startColumn` + code flows survive an import → export
+round-trip, so re-exporting a qualified engine's findings loses nothing.
 
 ---
 

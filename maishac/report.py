@@ -23,53 +23,155 @@ _STANDARDS = ["MISRA-C:2012", "BARR-C:2018", "CERT-C"]
 # SARIF result.level -> unified severity (used only when the rule isn't one we
 # recognize; recognized rules take severity from the knowledge base).
 _LEVEL_SEV = {"error": "critical", "warning": "major", "note": "minor", "none": "info"}
-_SARIF_MISRA = re.compile(r"misra[_-]c?[-_]?2012[-_](\d+\.\d+)", re.I)
+_SARIF_MISRA = re.compile(r"misra[_-]c?[-_]?20\d\d[-_ ]?(?:rule[-_ ]?|dir(?:ective)?[-_ ]?)?(\d+\.\d+)", re.I)
+_SARIF_MISRA_WORD = re.compile(r"\b(?:rule|dir(?:ective)?)\s*(\d+\.\d+)\b", re.I)
+_SARIF_BARE_NUM = re.compile(r"^\s*(\d+\.\d+)\s*$")
 _SARIF_CERT = re.compile(r"\b([A-Z]{3}\d{2}-C)\b", re.I)
+# Results whose kind is not a genuine defect must not be imported as violations.
+_NON_DEFECT_KINDS = {"pass", "notApplicable", "informational", "open", "review"}
 
 
 def _resolve_sarif_rule(rule_id: str) -> dict | None:
-    """Best-effort map of a foreign SARIF ruleId onto a Maisha rule.
-    Handles Maisha's own ids, MISRA (misra-c2012-21.3), CERT (cert-err34-c
-    or ERR34-C) and cppcheck semantic ids (nullPointer -> EXP34-C)."""
+    """Best-effort map of a foreign SARIF ruleId / taxon id onto a Maisha rule.
+    Handles Maisha's own ids, MISRA in many forms (``misra-c2012-21.3``,
+    ``MISRA C 2012 Rule 21.3``, ``Rule 21.3``, bare ``21.3``), CERT
+    (``cert-err34-c``, ``ERR34-C``) and cppcheck semantic ids
+    (``nullPointer`` -> EXP34-C)."""
+    if not rule_id:
+        return None
     meta = REGISTRY.get(rule_id) or REGISTRY.resolve(rule_id)
     if meta:
         return meta
-    m = _SARIF_MISRA.search(rule_id)
-    if m:
-        return REGISTRY.resolve(f"MISRA {m.group(1)}")
+    for pat in (_SARIF_MISRA, _SARIF_MISRA_WORD, _SARIF_BARE_NUM):
+        m = pat.search(rule_id)
+        if m and (r := REGISTRY.resolve(f"MISRA {m.group(1)}")):
+            return r
     m = _SARIF_CERT.search(rule_id)
-    if m:
-        return REGISTRY.resolve(f"CERT {m.group(1).upper()}")
+    if m and (r := REGISTRY.resolve(f"CERT {m.group(1).upper()}")):
+        return r
     if rule_id in CPPCHECK_TO_CERT:
         return REGISTRY.resolve(f"CERT {CPPCHECK_TO_CERT[rule_id]}")
     return None
 
 
+def _norm_uri(uri: str) -> str:
+    """Normalize a SARIF artifactLocation URI to a project-relative-ish path:
+    strip file:// schemes and leading ./ so fingerprints and file lookups are
+    stable across engines that emit absolute/scheme-prefixed URIs."""
+    if not uri:
+        return ""
+    if uri.startswith("file://"):
+        uri = uri[7:]
+        if len(uri) > 2 and uri[0] == "/" and uri[2] == ":":  # file:///C:/...
+            uri = uri[1:]
+    while uri.startswith("./"):
+        uri = uri[2:]
+    return uri
+
+
+def _run_indexes(run: dict) -> tuple[list[dict], list[list[dict]]]:
+    """Return (driver rule descriptors, taxonomy taxa lists) for a run, so
+    results can be resolved by ruleIndex and rules can be mapped to standard
+    guidelines via their relationships into a taxonomy."""
+    driver = (run.get("tool") or {}).get("driver") or {}
+    rules = driver.get("rules") or []
+    taxonomies = [(t.get("taxa") or []) for t in (run.get("taxonomies") or [])]
+    return rules, taxonomies
+
+
+def _result_descriptor(res: dict, rules: list[dict]) -> dict:
+    """Locate a result's reportingDescriptor via result.rule (index/id),
+    result.ruleIndex, or result.ruleId — whichever the tool used."""
+    ref = res.get("rule") or {}
+    idx = ref.get("index")
+    if idx is None:
+        idx = res.get("ruleIndex")
+    if isinstance(idx, int) and 0 <= idx < len(rules):
+        return rules[idx]
+    rid = ref.get("id") or res.get("ruleId")
+    if rid:
+        for r in rules:
+            if r.get("id") == rid:
+                return r
+    return {}
+
+
+def _guideline_candidates(res: dict, desc: dict, taxonomies: list[list[dict]]) -> list[str]:
+    """Ordered candidate ids to map onto the registry. Taxonomy guideline ids
+    (reached via the rule's relationships — how Helix QAC / Coverity attach the
+    MISRA/CERT number to a checker-specific ruleId like ``ABV.GENERAL``) come
+    first, then the ruleId / descriptor id / name strings."""
+    cands: list[str] = []
+    for rel in desc.get("relationships") or []:
+        tgt = rel.get("target") or {}
+        if tgt.get("id"):
+            cands.append(tgt["id"])
+        tc = (tgt.get("toolComponent") or {}).get("index")
+        ti = tgt.get("index")
+        if isinstance(tc, int) and isinstance(ti, int) and 0 <= tc < len(taxonomies):
+            taxa = taxonomies[tc]
+            if 0 <= ti < len(taxa):
+                tax = taxa[ti]
+                cands += [tax.get("id", ""), tax.get("name", "")]
+    for taxon in res.get("taxa") or []:            # some tools attach taxa to the result
+        cands.append(taxon.get("id", ""))
+    cands += [res.get("ruleId") or "", desc.get("id") or "", desc.get("name") or ""]
+    seen, out = set(), []
+    for c in cands:
+        if c and c not in seen:
+            seen.add(c)
+            out.append(c)
+    return out
+
+
+def _primary_location(res: dict) -> dict:
+    for loc in res.get("locations") or []:
+        if loc.get("physicalLocation"):
+            return loc["physicalLocation"]
+    return {}
+
+
 def parse_sarif(data: dict, root: Path) -> list[Finding]:
-    """Parse SARIF 2.1.0 results into Findings. Reuses Maisha fingerprints
-    from partialFingerprints when present (so its own export round-trips)."""
+    """Parse SARIF 2.1.0 results from any tool into Findings, robustly across
+    real qualified-engine dialects. Handles ruleId / ruleIndex / result.rule,
+    taxonomy+relationship guideline mapping, defaultConfiguration levels,
+    result.kind / baselineState filtering, multi-location results, missing
+    regions, scheme-prefixed URIs, and reuses Maisha's partialFingerprints so
+    its own export round-trips."""
     findings: list[Finding] = []
     for run in data.get("runs", []):
         driver = (run.get("tool") or {}).get("driver") or {}
         tool = (driver.get("name") or "sarif").lower()
+        rules, taxonomies = _run_indexes(run)
         for res in run.get("results", []):
-            rid_raw = res.get("ruleId") or ""
-            loc = ((res.get("locations") or [{}])[0].get("physicalLocation") or {})
-            uri = (loc.get("artifactLocation") or {}).get("uri") or ""
-            region = loc.get("region") or {}
+            # Only genuine defects. kind defaults to "fail"; skip pass/etc.,
+            # and skip findings a baseline marks as no longer present.
+            if (res.get("kind") or "fail") in _NON_DEFECT_KINDS:
+                continue
+            if res.get("baselineState") == "absent":
+                continue
+
+            desc = _result_descriptor(res, rules)
+            phys = _primary_location(res)
+            uri = _norm_uri((phys.get("artifactLocation") or {}).get("uri") or "")
+            region = phys.get("region") or {}
             line = int(region.get("startLine") or 0)
             col = int(region.get("startColumn") or 0)
             snippet = (region.get("snippet") or {}).get("text") or ""
             msg = (res.get("message") or {}).get("text") or ""
-            level = res.get("level") or "warning"
+            level = (res.get("level")
+                     or (desc.get("defaultConfiguration") or {}).get("level")
+                     or "warning")
 
-            meta = _resolve_sarif_rule(rid_raw)
+            candidates = _guideline_candidates(res, desc, taxonomies)
+            meta = next((m for c in candidates if (m := _resolve_sarif_rule(c))), None)
             if meta:
                 rid, standard = meta["id"], meta["standard"]
                 severity = meta.get("severity", _LEVEL_SEV.get(level, "major"))
                 fix = meta.get("fix", "")
             else:
-                rid, standard = f"sarif:{rid_raw}" if rid_raw else "sarif:unknown", "generic"
+                raw = next((c for c in candidates if c), "unknown")
+                rid, standard = f"sarif:{raw}", "generic"
                 severity, fix = _LEVEL_SEV.get(level, "major"), ""
 
             line_content = snippet.strip()
@@ -272,7 +374,7 @@ def sarif(mem: MemoryStore) -> dict:
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
         "runs": [{
-            "tool": {"driver": {"name": "Maisha", "version": "0.2.0",
+            "tool": {"driver": {"name": "Maisha", "version": "0.3.0",
                                   "rules": list(rules_seen.values())}},
             "results": results,
         }],
