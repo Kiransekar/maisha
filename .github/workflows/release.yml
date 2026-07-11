@@ -16,6 +16,7 @@ jobs:
     environment: pypi
     permissions:
       id-token: write        # required for Trusted Publishing
+      contents: read         # setting permissions replaces defaults, so checkout needs this back
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
