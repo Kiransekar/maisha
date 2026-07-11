@@ -1,0 +1,13 @@
+.git
+.github
+.pytest_cache
+**/__pycache__
+tests
+benchmark
+assets
+dist
+build
+*.egg-info
+.maishac
+*.md
+!README.md

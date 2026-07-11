@@ -164,7 +164,17 @@ pip install maishac
 ```
 
 This installs the `maishac` CLI and the `maishac` Python package. Verify with
-`maishac --help`. To hack on Maisha itself:
+`maishac --help`.
+
+**Or run it as a container** (batteries included — cppcheck's MISRA addon and
+clang-tidy are baked in, so no host setup):
+
+```bash
+docker run --rm -v "$PWD:/work" ghcr.io/kiransekar/maisha scan src/
+docker run --rm -i ghcr.io/kiransekar/maisha serve      # MCP server over stdio
+```
+
+To hack on Maisha itself:
 
 ```bash
 git clone https://github.com/Kiransekar/maisha.git
