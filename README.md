@@ -7,6 +7,8 @@
 &nbsp;![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 &nbsp;![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
+> ### Searching for an open-source alternative to Polyspace, Helix QAC or Coverity for MISRA C? **This is it.** Free, vendor-neutral, and driven from your IDE. → [`pipx install maishac`](#install)
+
 **The open-source compliance-workflow layer for MISRA C:2012, BARR-C:2018 and CERT C — usable from any agentic IDE.**
 
 Maisha is the free, vendor-neutral alternative to the paid compliance *workflow*
