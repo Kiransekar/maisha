@@ -3,7 +3,7 @@ name: Release to PyPI
 # Publishes maishac to PyPI when a version tag is pushed (e.g. v0.2.1).
 # Uses PyPI Trusted Publishing (OIDC) — no API token/secret to manage.
 # ONE-TIME SETUP: on pypi.org, add a trusted publisher for project `maishac`
-#   owner: Kiransekar · repo: maisha · workflow: release.yml · environment: pypi
+#   owner: WinterLabsHQ · repo: maisha · workflow: release.yml · environment: pypi
 # See https://docs.pypi.org/trusted-publishers/
 
 on:

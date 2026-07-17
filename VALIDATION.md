@@ -299,7 +299,7 @@ These restate and reconfirm the project's own honest framing:
 
 ## 8. What was NOT validated this cycle
 
-- **Docker container** (`ghcr.io/kiransekar/maisha`): not runnable in the
+- **Docker container** (`ghcr.io/winterlabshq/maisha`): not runnable in the
   validation environment (no Docker). Recommend a CI job that builds the image
   and runs `scan` + `serve` with the bundled analyzers.
 - **Cross-platform matrix beyond Windows**: this run was Windows (Git Bash +

@@ -170,8 +170,8 @@ This installs the `maishac` CLI and the `maishac` Python package. Verify with
 clang-tidy are baked in, so no host setup):
 
 ```bash
-docker run --rm -v "$PWD:/work" ghcr.io/kiransekar/maisha scan src/
-docker run --rm -i ghcr.io/kiransekar/maisha serve      # MCP server over stdio
+docker run --rm -v "$PWD:/work" ghcr.io/winterlabshq/maisha scan src/
+docker run --rm -i ghcr.io/winterlabshq/maisha serve      # MCP server over stdio
 ```
 
 To hack on Maisha itself:
