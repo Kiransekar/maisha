@@ -283,8 +283,9 @@ These restate and reconfirm the project's own honest framing:
 - **Not a qualified/certified tool** (see §0). The engines carry no qualification
   kit. Certification requires a qualified engine (Astrée/Polyspace/Helix QAC/…)
   and an accredited assessor; Maisha layers on top via SARIF import.
-- **Coverage is ~81 curated rules** across three standards — a fraction of the
-  full standards; detection is bounded by the engines, not the curated set.
+- **Coverage is ~86 curated rules** across three standards (35 MISRA C:2012,
+  20 BARR-C:2018, 31 CERT C) — a fraction of the full standards; detection is
+  bounded by the engines, not the curated set.
 - **The verification gate trades human effort for safety**: on typical MISRA
   findings, `test_gated` behaves almost like `human_gated` (most rule categories
   are semantic-risk). Budget for human review of nearly every fix.
