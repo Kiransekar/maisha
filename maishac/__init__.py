@@ -13,4 +13,4 @@ Architecture (all IDE-agnostic, exposed over MCP or CLI):
   cli          standalone command line interface (scan/fix-session/report)
 """
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"

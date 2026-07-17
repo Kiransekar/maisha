@@ -5,6 +5,8 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-17
+
 ### Added
 - **Container image on GitHub Packages (ghcr.io).** A `Dockerfile` produces a
   turnkey image with the free analyzers (cppcheck MISRA addon + clang-tidy)
@@ -12,6 +14,39 @@ All notable changes to Maisha are documented here. Format loosely follows
   src/` works with zero host setup; `serve` runs the MCP server over stdio. A
   `docker-publish.yml` workflow builds and pushes it (tags + `latest`) on each
   version tag, using the built-in `GITHUB_TOKEN`.
+- **`maishac --version`** flag, and **`python -m maishac`** as an alias for the CLI.
+- **Compiler-warnings analyzer adapter** (`gcc`/`clang -Wall -Wextra`). Runs the
+  compiler in `-fsyntax-only` mode, maps `-Wflag`s onto MISRA/CERT rules where a
+  clear equivalence exists (e.g. `-Wsign-compare` → INT31-C, `-Wvla` → 18.8),
+  keeps unmapped warnings as `compiler:-Wflag` evidence, and degrades to nothing
+  when no compiler is installed. Registered in `run_scan`.
+- **Knowledge base grown 81 → 86 rules.** +4 MISRA C:2012 rules (8.2 function
+  prototype form, 8.13 const-correct pointers, 12.1 explicit precedence, 16.1
+  well-formed switch) each with a matching authoring pattern; +CERT MSC39-C
+  (variadic/`va_list` use); +8 cppcheck-id → CERT mappings so more raw cppcheck
+  output becomes enriched findings.
+- **Real qualified-engine SARIF fixture + dialect test** — genuine cppcheck 2.17
+  `--output-format=sarif` output (sanitized), validating the importer against a
+  real toolchain rather than only modeled dialects.
+- **`VALIDATION.md` validation evidence pack** and a substantially expanded test
+  suite (property/fuzz via Hypothesis, MCP-server stdio end-to-end, memory
+  concurrency stress, SARIF 2.1.0 schema conformance, adapter + in-process CLI
+  tests) plus a real-world multi-corpus benchmark runner.
+- Repo hygiene: `.gitattributes` (line-ending normalization), `.editorconfig`,
+  and `CITATION.cff` (GitHub "Cite this repository").
+
+### Fixed
+- **`strip_comments_strings` escape handling** (found by the new fuzz suite): a
+  trailing backslash at EOF grew the stripped output, and a backslash-escaped
+  newline (line continuation) inside a literal dropped its newline — both
+  desynchronized (line, column) offsets. Length and newline positions are now
+  preserved exactly.
+- **`maishac import` and `maishac check`** now fail cleanly (message + exit 1) on
+  a missing or malformed file instead of spilling an unhandled traceback, and
+  `check` tolerates non-UTF-8 bytes.
+- Verification-gate test made OS-portable (Unix `true`/`false` → the current
+  interpreter), and `hypothesis`/`jsonschema` declared as dev dependencies so CI
+  installs them.
 
 ## [0.3.1] - 2026-07-11
 
