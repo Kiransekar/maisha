@@ -27,6 +27,7 @@ import sys
 import time
 from pathlib import Path
 
+from . import __version__
 from .engine import LoopEngine
 from .rules import REGISTRY
 from . import report as report_mod
@@ -200,6 +201,7 @@ def cmd_serve(args):
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="maishac",
                                 description="Agent harness for MISRA C, BARR-C and CERT C.")
+    p.add_argument("--version", action="version", version=f"maishac {__version__}")
     p.add_argument("--project", "-p", help="Project root (default: cwd)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
