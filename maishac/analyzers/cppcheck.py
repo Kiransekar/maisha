@@ -17,19 +17,26 @@ from .base import Analyzer
 from ..model import Finding, enclosing_function, relpath
 from ..rules import REGISTRY
 
-# cppcheck error id -> CERT rule
+# cppcheck error id -> CERT rule. Every target here must be a CERT rule present
+# in the knowledge base (maishac/rules/cert_c.json) so it resolves to enriched
+# metadata; an unmapped id falls through to a raw `cppcheck:<id>` finding.
 CPPCHECK_TO_CERT = {
     "nullPointer": "EXP34-C", "nullPointerRedundantCheck": "EXP34-C",
-    "uninitvar": "EXP33-C", "uninitStructMember": "EXP33-C",
+    "nullPointerArithmetic": "EXP34-C", "nullPointerArithmeticRedundantCheck": "EXP34-C",
+    "uninitvar": "EXP33-C", "uninitStructMember": "EXP33-C", "uninitdata": "EXP33-C",
     "arrayIndexOutOfBounds": "ARR30-C", "bufferAccessOutOfBounds": "ARR30-C",
-    "outOfBounds": "ARR30-C", "negativeIndex": "ARR30-C",
+    "outOfBounds": "ARR30-C", "negativeIndex": "ARR30-C", "pointerOutOfBounds": "ARR30-C",
+    "negativeArraySize": "ARR32-C",
     "doubleFree": "MEM31-C", "deallocuse": "MEM30-C", "useAfterFree": "MEM30-C",
-    "memleak": "MEM31-C", "mismatchAllocDealloc": "MEM34-C", "autovarInvalidDeallocation": "MEM34-C",
+    "memleak": "MEM31-C", "memleakOnRealloc": "MEM31-C",
+    "mismatchAllocDealloc": "MEM34-C", "autovarInvalidDeallocation": "MEM34-C",
     "zerodiv": "INT33-C", "zerodivcond": "INT33-C",
     "integerOverflow": "INT32-C", "signConversion": "INT31-C", "truncLongCastAssignment": "INT31-C",
     "returnDanglingLifetime": "DCL30-C", "danglingLifetime": "DCL30-C", "returnTempAddress": "DCL30-C",
+    "autoVariables": "DCL30-C",
     "ignoredReturnValue": "ERR33-C", "leakReturnValNotUsed": "ERR33-C",
     "invalidscanf": "STR31-C", "bufferNotZeroTerminated": "STR32-C",
+    "wrongmathcall": "FLP32-C",
     "va_start_wrongParameter": "MSC39-C",
 }
 
