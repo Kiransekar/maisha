@@ -16,7 +16,10 @@ rather than checking specific findings —
 
 from __future__ import annotations
 
-from hypothesis import given, settings, strategies as st
+import pytest
+
+pytest.importorskip("hypothesis")  # dev extra; skip cleanly if not installed
+from hypothesis import given, settings, strategies as st  # noqa: E402
 
 from maishac.analyzers.native import NativeAnalyzer, strip_comments_strings
 from maishac.model import compute_fingerprint, enclosing_function
