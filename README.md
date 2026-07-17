@@ -79,7 +79,7 @@ does everything that must never hallucinate:
   Advisory/Disapplied), plus honest disclosure of which guidelines are *not
   checked*.
 
-The three rule knowledge bases (**81 rules** — 31 MISRA C:2012, 20 BARR-C:2018,
+The three rule knowledge bases (**85 rules** — 35 MISRA C:2012, 20 BARR-C:2018,
 30 CERT C) contain **original paraphrased
 summaries** written for this project — no standard text is reproduced. For
 authoritative wording you still need the official MISRA / BARR / SEI CERT documents.

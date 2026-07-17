@@ -56,6 +56,64 @@ PATTERNS: list[dict] = [
                "stack usage is statically analysable.",
     },
     {
+        "concern": "function prototypes and parameter names",
+        "keywords": ["prototype", "function declaration", "parameter name",
+                     "K&R", "empty parentheses", "void parameter", "forward declaration"],
+        "rules": ["MISRA 8.2"],
+        "avoid": "int  process();          /* no prototype: accepts any arguments */\n"
+                 "void init() { }          /* empty () means 'unspecified', not 'none' */",
+        "prefer": "int  process(int32_t id, uint8_t mode);   /* full prototype, named */\n"
+                  "void init(void) { }                        /* (void): takes no arguments */",
+        "why": "A non-prototype declaration disables argument checking, and an empty "
+               "() parameter list means 'unspecified' in C, not 'no parameters'. "
+               "Prototype form with named parameters lets the compiler catch "
+               "mismatched calls and documents the interface.",
+    },
+    {
+        "concern": "const-correctness for pointers",
+        "keywords": ["const", "const-correctness", "read-only", "immutable",
+                     "pointer parameter", "input parameter"],
+        "rules": ["MISRA 8.13"],
+        "avoid": "size_t checksum(uint8_t *data, size_t n);  /* looks like it may write data */",
+        "prefer": "size_t checksum(const uint8_t *data, size_t n);  /* promises data is read-only */",
+        "why": "Qualify a pointer's target const wherever the object is not modified "
+               "through it: the compiler then enforces read-only use, the intent is "
+               "documented, and callers may pass const objects. Add const from the "
+               "inside out (const uint8_t * for a read-only buffer).",
+    },
+    {
+        "concern": "explicit operator precedence",
+        "keywords": ["precedence", "parentheses", "operator order",
+                     "mixed operators", "ambiguous expression", "bitwise"],
+        "rules": ["MISRA 12.1"],
+        "avoid": "if (a & mask == flag) { }   /* == binds tighter than & — a bug */\n"
+                 "x = a + b << 2;",
+        "prefer": "if ((a & mask) == flag) { }\n"
+                  "x = a + (b << 2);",
+        "why": "C's precedence surprises readers (bitwise below comparison, shift "
+               "below arithmetic). Parenthesize mixed-operator sub-expressions so "
+               "the evaluation order is explicit and matches intent — this prevents "
+               "real bugs, not just style nits.",
+    },
+    {
+        "concern": "well-formed switch statement",
+        "keywords": ["switch", "case", "fallthrough", "fall through",
+                     "break", "well-formed switch", "default"],
+        "rules": ["MISRA 16.1", "MISRA 16.4"],
+        "avoid": "switch (state) {\n"
+                 "  case A: do_a();          /* unintended fall-through into B */\n"
+                 "  case B: do_b(); break;\n"
+                 "}",
+        "prefer": "switch (state) {\n"
+                  "  case A: do_a(); break;\n"
+                  "  case B: do_b(); break;\n"
+                  "  default: handle_unexpected(); break;\n"
+                  "}",
+        "why": "A well-formed switch terminates every clause with break/return (no "
+               "accidental fall-through) and ends with a default, so unexpected "
+               "values are handled and the control flow is reviewable at a glance.",
+    },
+    {
         "concern": "check library return values",
         "keywords": ["return value", "ignore", "errno", "check error", "unused result"],
         "rules": ["MISRA 17.7", "CERT ERR33-C"],

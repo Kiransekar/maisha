@@ -25,7 +25,7 @@ def test_fresh_scan_is_non_compliant_with_coverage_disclosed(tmp_path):
     assert s["verdict"].startswith("NON-COMPLIANT")
     assert s["counts"]["violations"] > 0
     # Coverage is disclosed honestly, never counted as compliant.
-    assert s["enforced"] == 31 and s["not_checked"] > 0
+    assert s["enforced"] == 35 and s["not_checked"] > 0
     assert s["enforced"] + s["not_checked"] == s["universe"]
 
 

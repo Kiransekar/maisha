@@ -14,7 +14,7 @@ def test_every_pattern_rule_reference_resolves():
 
 
 def test_every_kb_rule_has_a_compliant_pattern():
-    """Full coverage: each of the 81 KB rules maps to at least one authoring
+    """Full coverage: each of the 85 KB rules maps to at least one authoring
     idiom, so guidance/check can teach a fix for anything the harness knows.
     If a rule is added to the KB without a pattern, this fails."""
     patterns._BY_RULE = None  # rebuild index
