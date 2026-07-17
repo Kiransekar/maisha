@@ -1,0 +1,342 @@
+{
+  "corpora": [
+    {
+      "name": "littlefs",
+      "analyzers_used": [
+        "native",
+        "cppcheck"
+      ],
+      "files": 14,
+      "loc": 14274,
+      "findings_total": 1822,
+      "findings_per_kloc": 127.6,
+      "elapsed_s": 75.8,
+      "by_severity": {
+        "blocker": 15,
+        "critical": 676,
+        "minor": 1131
+      },
+      "by_standard": {
+        "CERT-C": 15,
+        "MISRA-C:2012": 1718,
+        "generic": 66,
+        "BARR-C:2018": 23
+      },
+      "by_analyzer": {
+        "native": 682,
+        "cppcheck": 1071,
+        "native+cppcheck": 69
+      },
+      "top_rules": [
+        [
+          "MISRA-C:2012 Dir 4.6",
+          390
+        ],
+        [
+          "MISRA-C:2012 Rule 10.4",
+          187
+        ],
+        [
+          "MISRA-C:2012 Rule 17.7",
+          167
+        ],
+        [
+          "MISRA-C:2012 Rule 21.6",
+          151
+        ],
+        [
+          "MISRA-C:2012 Rule 8.4",
+          112
+        ],
+        [
+          "MISRA-C:2012 Rule 11.5",
+          77
+        ],
+        [
+          "MISRA-C:2012 Rule 21.3",
+          60
+        ],
+        [
+          "MISRA-C:2012 Rule 14.4",
+          55
+        ],
+        [
+          "MISRA-C:2012 Rule 12.1",
+          55
+        ],
+        [
+          "MISRA-C:2012 Rule 15.5",
+          46
+        ],
+        [
+          "MISRA-C:2012 Dir 4.4",
+          42
+        ],
+        [
+          "cppcheck:misra-config",
+          36
+        ],
+        [
+          "MISRA-C:2012 Rule 5.9",
+          30
+        ],
+        [
+          "MISRA-C:2012 Rule 15.1",
+          27
+        ],
+        [
+          "MISRA-C:2012 Rule 11.8",
+          27
+        ]
+      ],
+      "fp_prone_classes": {
+        "MISRA-C:2012 Rule 15.6": 11,
+        "MISRA-C:2012 Rule 8.4": 112,
+        "MISRA-C:2012 Rule 17.2": 3,
+        "MISRA-C:2012 Rule 17.3": 2
+      },
+      "fp_prone_total": 128,
+      "include_paths_used": [
+        "D:\\Projects\\maisha\\benchmark\\corpora\\littlefs"
+      ]
+    },
+    {
+      "name": "lwip",
+      "analyzers_used": [
+        "native",
+        "cppcheck"
+      ],
+      "files": 38,
+      "loc": 34327,
+      "findings_total": 5729,
+      "findings_per_kloc": 166.9,
+      "elapsed_s": 71.5,
+      "by_severity": {
+        "critical": 503,
+        "minor": 5226
+      },
+      "by_standard": {
+        "MISRA-C:2012": 3947,
+        "generic": 29,
+        "CERT-C": 1,
+        "BARR-C:2018": 1752
+      },
+      "by_analyzer": {
+        "native": 1865,
+        "cppcheck": 3841,
+        "native+cppcheck": 23
+      },
+      "top_rules": [
+        [
+          "MISRA-C:2012 Rule 2.5",
+          1855
+        ],
+        [
+          "BARR-C 3.1a",
+          1752
+        ],
+        [
+          "MISRA-C:2012 Rule 10.4",
+          456
+        ],
+        [
+          "MISRA-C:2012 Rule 17.7",
+          279
+        ],
+        [
+          "MISRA-C:2012 Rule 15.5",
+          227
+        ],
+        [
+          "MISRA-C:2012 Rule 20.9",
+          161
+        ],
+        [
+          "MISRA-C:2012 Rule 14.4",
+          112
+        ],
+        [
+          "MISRA-C:2012 Rule 20.7",
+          112
+        ],
+        [
+          "MISRA-C:2012 Dir 4.6",
+          80
+        ],
+        [
+          "MISRA-C:2012 Rule 11.5",
+          76
+        ],
+        [
+          "MISRA-C:2012 Rule 8.7",
+          68
+        ],
+        [
+          "MISRA-C:2012 Rule 12.3",
+          49
+        ],
+        [
+          "MISRA-C:2012 Rule 17.8",
+          45
+        ],
+        [
+          "MISRA-C:2012 Rule 12.1",
+          39
+        ],
+        [
+          "MISRA-C:2012 Rule 15.1",
+          37
+        ]
+      ],
+      "fp_prone_classes": {
+        "MISRA-C:2012 Rule 15.6": 20,
+        "MISRA-C:2012 Rule 8.4": 16,
+        "MISRA-C:2012 Rule 20.9": 161,
+        "MISRA-C:2012 Rule 17.3": 1
+      },
+      "fp_prone_total": 198,
+      "include_paths_used": [
+        "D:\\Projects\\maisha\\benchmark\\corpora\\lwip\\src\\include"
+      ]
+    },
+    {
+      "name": "mbedtls",
+      "analyzers_used": [
+        "native",
+        "cppcheck"
+      ],
+      "files": 47,
+      "loc": 52383,
+      "findings_total": 2671,
+      "findings_per_kloc": 51.0,
+      "elapsed_s": 303.1,
+      "by_severity": {
+        "critical": 13,
+        "minor": 2658
+      },
+      "by_standard": {
+        "MISRA-C:2012": 1489,
+        "BARR-C:2018": 1182
+      },
+      "by_analyzer": {
+        "native": 2671
+      },
+      "top_rules": [
+        [
+          "MISRA-C:2012 Dir 4.6",
+          1363
+        ],
+        [
+          "BARR-C 3.1a",
+          1182
+        ],
+        [
+          "MISRA-C:2012 Rule 15.1",
+          97
+        ],
+        [
+          "MISRA-C:2012 Rule 20.5",
+          10
+        ],
+        [
+          "MISRA-C:2012 Rule 16.4",
+          5
+        ],
+        [
+          "MISRA-C:2012 Rule 15.6",
+          5
+        ],
+        [
+          "MISRA-C:2012 Rule 19.2",
+          3
+        ],
+        [
+          "MISRA-C:2012 Dir 4.4",
+          3
+        ],
+        [
+          "MISRA-C:2012 Rule 21.6",
+          2
+        ],
+        [
+          "MISRA-C:2012 Rule 21.5",
+          1
+        ]
+      ],
+      "fp_prone_classes": {
+        "MISRA-C:2012 Rule 15.6": 5
+      },
+      "fp_prone_total": 5,
+      "include_paths_used": [
+        "D:\\Projects\\maisha\\benchmark\\corpora\\mbedtls\\include"
+      ]
+    },
+    {
+      "name": "zephyr-kernel",
+      "analyzers_used": [
+        "native",
+        "cppcheck"
+      ],
+      "files": 78,
+      "loc": 22922,
+      "findings_total": 9873,
+      "findings_per_kloc": 430.7,
+      "elapsed_s": 315.5,
+      "by_severity": {
+        "critical": 6,
+        "minor": 9867
+      },
+      "by_standard": {
+        "MISRA-C:2012": 453,
+        "BARR-C:2018": 9420
+      },
+      "by_analyzer": {
+        "native": 9873
+      },
+      "top_rules": [
+        [
+          "BARR-C 3.2a",
+          9284
+        ],
+        [
+          "MISRA-C:2012 Dir 4.6",
+          412
+        ],
+        [
+          "BARR-C 3.1a",
+          136
+        ],
+        [
+          "MISRA-C:2012 Rule 15.1",
+          33
+        ],
+        [
+          "MISRA-C:2012 Rule 15.6",
+          6
+        ],
+        [
+          "MISRA-C:2012 Rule 19.2",
+          1
+        ],
+        [
+          "MISRA-C:2012 Rule 20.5",
+          1
+        ]
+      ],
+      "fp_prone_classes": {
+        "MISRA-C:2012 Rule 15.6": 6
+      },
+      "fp_prone_total": 6,
+      "include_paths_used": [
+        "D:\\Projects\\maisha\\benchmark\\corpora\\zephyr-kernel\\include",
+        "D:\\Projects\\maisha\\benchmark\\corpora\\zephyr-kernel\\kernel\\include"
+      ]
+    }
+  ],
+  "missing": [],
+  "analyzers_requested": [
+    "native",
+    "cppcheck"
+  ],
+  "note": "No ground truth for real corpora; numbers are distribution/density, not recall/precision. FP-prone classes per BENCHMARKS.md."
+}

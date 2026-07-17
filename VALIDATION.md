@@ -180,33 +180,41 @@ configuration/include-path-driven false positives so a reviewer samples them
 first. Runner: `benchmark/run_realworld_benchmark.py`; corpora pinned in
 `benchmark/corpora/CLONE.sh`.
 
-> **Status: run in progress.** littlefs and lwIP are complete (below); mbedTLS and
-> Zephyr (kernel) are still scanning. This section and the HTML render are updated
-> when the full run finishes. Engines: native + cppcheck (MISRA addon). clang-tidy
-> was excluded from the corpus run: on un-built third-party source without a
-> compilation database it emits mostly `file not found` noise (see `BENCHMARKS.md`)
-> at a large per-file time cost — low signal for a distribution measurement.
+Engines: native + cppcheck (MISRA addon). clang-tidy was excluded from the corpus
+run: on un-built third-party source without a compilation database it emits mostly
+`file not found` noise (see `BENCHMARKS.md`) at a large per-file time cost — low
+signal for a distribution measurement.
 
-| Corpus | Files | kLOC | Findings | /kLOC | critical | minor | FP-prone* |
+| Corpus | Files | kLOC | Findings | /kLOC | critical+ | minor | FP-prone* |
 |---|--:|--:|--:|--:|--:|--:|--:|
-| littlefs (`v2.9.3`) | 14 | 14.3 | 1,822 | 127.6 | 676 | 1,131 | 128 |
+| littlefs (`v2.9.3`) | 14 | 14.3 | 1,822 | 127.6 | 691 | 1,131 | 128 |
 | lwIP (`STABLE-2_2_0`) | 38 | 34.3 | 5,729 | 166.9 | 503 | 5,226 | 198 |
-| mbedTLS (`v3.6.2`) | — | — | _scanning_ | — | — | — | — |
-| Zephyr kernel | — | — | _scanning_ | — | — | — | — |
+| mbedTLS (`v3.6.2`) | 47 | 52.4 | 2,671 | 51.0 | 13 | 2,658 | 5 |
+| Zephyr (kernel) | 78 | 22.9 | 9,873 | 430.7 | 6 | 9,867 | 6 |
+| **Total** | **177** | **123.9** | **20,095** | **162.2** | **1,213** | **18,882** | **337** |
 
 \* *FP-prone* = findings in the rule classes `BENCHMARKS.md` proved are dominated by
 configuration/include-path false positives on an out-of-the-box run (8.4, 20.9,
 17.3, 15.6, 17.2) — surfaced separately so a reviewer samples them first rather
-than treating them as defects.
+than treating them as defects. "critical+" folds in the few blocker findings.
 
 **Reading these numbers honestly** (consistent with the FreeRTOS run in
-`BENCHMARKS.md`): raw finding *density* is high because the bulk are **advisory /
-style** findings (MISRA advisory + BARR-C line-length/style), not defects — the
-same "91% of findings are one advisory style rule" effect seen on FreeRTOS. The
-FP-prone counts (128, 198) are a small fraction of the total, which is the point:
-the density is dominated by style advisories and a bounded, known-FP-prone tail,
-not by a flood of spurious critical findings. These are *distribution* numbers on
-unfamiliar code, not a recall/precision claim.
+`BENCHMARKS.md`):
+
+- **Density is dominated by advisory / style findings, not defects.** 94% of all
+  findings (18,882 / 20,095) are `minor` — MISRA advisory + BARR-C line-length /
+  tab-indentation style. Zephyr's 430/kLOC is almost entirely BARR-C style (9,420
+  of its 9,873 findings) because the kernel uses tabs and long lines — *true*
+  findings against an 80-column/space house style Zephyr does not share, not
+  defects. This is the same effect measured on FreeRTOS.
+- **The known-FP-prone tail is ~1.7% of findings** (337 / 20,095), and *lower on
+  well-kept code*: mbedTLS — a MISRA-conscious crypto library — scans at 51/kLOC
+  with only **5** FP-prone findings across 52 kLOC. Density tracks house style far
+  more than it tracks code quality.
+- These are **distribution** numbers on unfamiliar out-of-the-box code, **not a
+  recall/precision claim** — no ground truth exists for these corpora. The
+  take-away for adopters matches the README: set a severity floor and your own
+  style config, and pass include paths, before reading raw counts.
 
 ---
 
