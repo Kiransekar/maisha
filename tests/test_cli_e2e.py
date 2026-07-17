@@ -56,6 +56,14 @@ def _P(proj):
     return ["-p", str(proj)]
 
 
+def test_version_flag(capsys):
+    """`maishac --version` prints the version and exits 0 (issue #2)."""
+    from maishac import __version__
+    out, _, code = run(["--version"], capsys)
+    assert code == 0
+    assert __version__ in (out if isinstance(out, str) else "")
+
+
 def test_scan_and_findings(proj, capsys):
     out, _, code = run(_P(proj) + ["scan", "src", "--analyzers", "native"], capsys)
     assert code == 0
