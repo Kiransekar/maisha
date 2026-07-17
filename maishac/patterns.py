@@ -96,6 +96,27 @@ PATTERNS: list[dict] = [
                "real bugs, not just style nits.",
     },
     {
+        "concern": "variadic functions and va_list",
+        "keywords": ["va_list", "va_arg", "va_start", "va_end", "va_copy",
+                     "variadic", "varargs", "stdarg", "ellipsis"],
+        "rules": ["CERT MSC39-C", "MISRA 17.1"],
+        "avoid": "va_start(ap, fmt);\n"
+                 "sum_args(ap);        /* consumes ap to the end */\n"
+                 "log_args(ap);        /* ap is now indeterminate — undefined behaviour */\n"
+                 "va_end(ap);",
+        "prefer": "va_list ap, ap2;\n"
+                  "va_start(ap, fmt);\n"
+                  "va_copy(ap2, ap);\n"
+                  "sum_args(ap);        /* consumes ap */\n"
+                  "log_args(ap2);       /* independent pass over a fresh copy */\n"
+                  "va_end(ap2);\n"
+                  "va_end(ap);",
+        "why": "A va_list is consumed by va_arg; handing the same list to a second "
+               "traversal, or touching it after va_end, reads an indeterminate "
+               "value. Take a va_copy for each independent pass and va_end every "
+               "list you start.",
+    },
+    {
         "concern": "well-formed switch statement",
         "keywords": ["switch", "case", "fallthrough", "fall through",
                      "break", "well-formed switch", "default"],

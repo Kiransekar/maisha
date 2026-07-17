@@ -34,10 +34,10 @@ def _xml(ids):
     return f'<?xml version="1.0"?><results version="2">{errs}</results>'
 
 
-# Pre-existing mappings whose CERT rule is not yet in the knowledge base (they
-# still produce a finding, just without enriched metadata). Tracked so the guard
-# below stays honest without failing on gaps this change did not introduce.
-_KB_GAPS = {"MSC39-C"}
+# CERT rule ids mapped from cppcheck that are not (yet) in the knowledge base.
+# Empty: MSC39-C was the last gap and has since been added, so every mapping
+# target now resolves to enriched metadata.
+_KB_GAPS: set[str] = set()
 
 
 def test_mapping_targets_exist_in_the_kb():

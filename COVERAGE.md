@@ -82,12 +82,12 @@ is up to that engine.
 | BARR-C 8.5a | - | major | **not detected** | Every switch shall end with a default case that traps unexpected values. |
 | BARR-C 8.6a | - | major | **not detected** | Loops shall have provably bounded termination (no unbounded while(1) without exit intent documented). |
 
-## CERT-C — 30 rules (7 detected with zero dependencies)
+## CERT-C — 31 rules (7 detected with zero dependencies)
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
 | CERT ARR30-C | - | blocker | clang-tidy, cppcheck | Do not form or use out-of-bounds pointers or array subscripts. |
-| CERT ARR32-C | - | critical | clang-tidy | Ensure size arguments for variable-length arrays are valid and bounded. |
+| CERT ARR32-C | - | critical | clang-tidy, cppcheck | Ensure size arguments for variable-length arrays are valid and bounded. |
 | CERT CON33-C | - | critical | native, clang-tidy | Avoid race conditions from library functions that use static internal state. |
 | CERT DCL30-C | - | blocker | clang-tidy, cppcheck | Do not let object addresses escape their lifetime (e.g., returning pointers to locals). |
 | CERT DCL37-C | - | major | clang-tidy | Do not declare or define reserved identifiers (leading underscore, standard names). |
@@ -100,7 +100,7 @@ is up to that engine.
 | CERT EXP45-C | - | major | clang-tidy | Do not perform assignments inside selection or iteration condition expressions. |
 | CERT FIO30-C | - | blocker | clang-tidy | Never pass externally influenced data as a printf-family format string. |
 | CERT FIO34-C | - | critical | clang-tidy | Distinguish characters read from a file from EOF/WEOF. |
-| CERT FLP32-C | - | critical | clang-tidy | Prevent or detect domain and range errors in floating-point math functions. |
+| CERT FLP32-C | - | critical | clang-tidy, cppcheck | Prevent or detect domain and range errors in floating-point math functions. |
 | CERT FLP37-C | - | major | native, clang-tidy | Do not compare floating-point values with == or != for equality. |
 | CERT INT30-C | - | critical | clang-tidy | Ensure unsigned integer operations do not wrap unintentionally. |
 | CERT INT31-C | - | critical | clang-tidy, cppcheck | Ensure integer conversions do not lose or misinterpret data. |
@@ -112,9 +112,10 @@ is up to that engine.
 | CERT MEM35-C | - | critical | clang-tidy | Allocate sufficient memory for an object, guarding size computations against overflow. |
 | CERT MSC32-C | - | critical | native, clang-tidy | Seed pseudorandom generators properly; do not use rand() where quality matters. |
 | CERT MSC33-C | - | blocker | native, clang-tidy | Do not pass invalid data to asctime()/similar fixed-buffer time functions. |
+| CERT MSC39-C | - | critical | clang-tidy, cppcheck | Do not call va_arg() on a va_list whose value is indeterminate (already consumed by another traversal, or used after va_end). |
 | CERT PRE31-C | - | major | clang-tidy | Avoid side effects in arguments to unsafe (multi-evaluating) macros. |
 | CERT SIG30-C | - | critical | clang-tidy | Call only async-signal-safe functions inside signal handlers. |
 | CERT STR31-C | - | blocker | native, clang-tidy, cppcheck | Guarantee destination storage is large enough for string data plus the null terminator (gets/strcpy/strcat/sprintf are unbounded). |
 | CERT STR32-C | - | blocker | clang-tidy, cppcheck | Do not pass non-null-terminated character sequences to functions that expect strings. |
 
-_Total: 85 rules across 3 standards._
+_Total: 86 rules across 3 standards._
