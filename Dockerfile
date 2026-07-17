@@ -13,7 +13,7 @@ COPY pyproject.toml README.md LICENSE /src/
 COPY maishac /src/maishac
 RUN pip install --no-cache-dir /src
 
-# Mount your project here: `docker run -v "$PWD:/work" ghcr.io/winterlabshq/maisha scan src/`
+# Mount your project here: `docker run -v "$PWD:/work" ghcr.io/kiransekar/maisha scan src/`
 WORKDIR /work
 ENTRYPOINT ["maishac"]
 CMD ["--help"]

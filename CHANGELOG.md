@@ -10,7 +10,7 @@ All notable changes to Maisha are documented here. Format loosely follows
 ### Added
 - **Container image on GitHub Packages (ghcr.io).** A `Dockerfile` produces a
   turnkey image with the free analyzers (cppcheck MISRA addon + clang-tidy)
-  pre-installed, so `docker run -v "$PWD:/work" ghcr.io/winterlabshq/maisha scan
+  pre-installed, so `docker run -v "$PWD:/work" ghcr.io/kiransekar/maisha scan
   src/` works with zero host setup; `serve` runs the MCP server over stdio. A
   `docker-publish.yml` workflow builds and pushes it (tags + `latest`) on each
   version tag, using the built-in `GITHUB_TOKEN`.

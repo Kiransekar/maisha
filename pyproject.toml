@@ -26,10 +26,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/WinterLabsHQ/maisha"
-Repository = "https://github.com/WinterLabsHQ/maisha"
-Issues = "https://github.com/WinterLabsHQ/maisha/issues"
-Changelog = "https://github.com/WinterLabsHQ/maisha/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Kiransekar/maisha"
+Repository = "https://github.com/Kiransekar/maisha"
+Issues = "https://github.com/Kiransekar/maisha/issues"
+Changelog = "https://github.com/Kiransekar/maisha/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "hypothesis>=6", "jsonschema>=4"]
