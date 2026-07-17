@@ -8,9 +8,11 @@ from .base import Analyzer, collect_c_files
 from .native import NativeAnalyzer
 from .cppcheck import CppcheckAnalyzer
 from .clang_tidy import ClangTidyAnalyzer
+from .compiler import CompilerAnalyzer
 from ..model import Finding
 
-ALL_ANALYZERS: list[type[Analyzer]] = [NativeAnalyzer, CppcheckAnalyzer, ClangTidyAnalyzer]
+ALL_ANALYZERS: list[type[Analyzer]] = [NativeAnalyzer, CppcheckAnalyzer,
+                                       ClangTidyAnalyzer, CompilerAnalyzer]
 
 
 def available_analyzers(only: list[str] | None = None) -> list[Analyzer]:
