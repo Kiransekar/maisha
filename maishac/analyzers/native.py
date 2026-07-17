@@ -52,7 +52,16 @@ def strip_comments_strings(src: str) -> str:
         elif mode in ("str", "chr"):
             quote = '"' if mode == "str" else "'"
             if c == "\\":
-                out.append("  "); i += 2; continue
+                # An escape blanks the backslash AND the char it escapes, keeping
+                # length parity. But a backslash as the very last character (a
+                # malformed/truncated escape at EOF) escapes nothing — emit one
+                # blank for one consumed char, or the output grows longer than
+                # the input and every column position after it desyncs.
+                if i + 1 < n:
+                    out.append("  "); i += 2
+                else:
+                    out.append(" "); i += 1
+                continue
             if c == quote:
                 mode = "code"; out.append(quote); i += 1; continue
             out.append(c if c == "\n" else " "); i += 1

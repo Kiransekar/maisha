@@ -9,3 +9,14 @@ dist/
 # benchmark/ harness scripts regenerate these scratch working directories
 # (each contains its own .maishac/memory.db) on every run — not source.
 benchmark/results/_*/
+
+# Real-world benchmark corpora (cloned externally, not vendored) — ignore the
+# cloned repos but keep the reproducer script (see negation below).
+benchmark/corpora/*
+
+# Local coverage / interim benchmark artifacts (regenerated, not source)
+.coverage
+benchmark/results/realworld_console.txt
+
+# ...but DO track the corpora reproducer script (dir itself is ignored above)
+!benchmark/corpora/CLONE.sh

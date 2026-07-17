@@ -123,7 +123,17 @@ def cmd_import(args):
     if args.format != "sarif":
         print(f"Unsupported import format '{args.format}' (only 'sarif').", file=sys.stderr)
         sys.exit(1)
-    _print(eng.import_sarif(args.file))
+    # A compliance tool's import command must fail cleanly on a missing or
+    # malformed file, not spill an unhandled traceback (cf. the report-output
+    # hardening in main()).
+    try:
+        _print(eng.import_sarif(args.file))
+    except FileNotFoundError:
+        print(f"SARIF file not found: '{args.file}'", file=sys.stderr)
+        sys.exit(1)
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"'{args.file}' is not valid SARIF JSON: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def cmd_deviate(args):

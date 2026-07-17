@@ -79,7 +79,7 @@
       "cppcheck",
       "clang-tidy"
     ],
-    "elapsed_s": 2.0470000000000255,
+    "elapsed_s": 3.70299999999952,
     "total_findings": 110
   },
   "with_include_paths": {
@@ -162,7 +162,7 @@
       "cppcheck",
       "clang-tidy"
     ],
-    "elapsed_s": 2.2660000000000764,
+    "elapsed_s": 3.7810000000008586,
     "total_findings": 138
   }
 }

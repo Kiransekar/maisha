@@ -1,10 +1,20 @@
 """The verification gate: a fix that only silenced the analyzer is NOT resolved
 until a passing test run or a human confirms it (backlog §1/§5)."""
 
+import sys
 from pathlib import Path
 
 from maishac.engine import LoopEngine
 from maishac.memory import semantic_risk
+
+# Cross-platform always-pass / always-fail test commands. The engine runs the
+# configured test_command through subprocess with shell=True, which resolves to
+# cmd.exe on Windows and /bin/sh on POSIX. The Unix shell builtins `true`/`false`
+# are NOT cmd.exe commands, so hard-coding them makes these tests pass only where
+# a `true`/`false` executable happens to be on PATH (Linux, Git Bash) and fail on
+# a bare Windows shell. Driving the current interpreter is portable everywhere.
+PASS_CMD = f'"{sys.executable}" -c "raise SystemExit(0)"'
+FAIL_CMD = f'"{sys.executable}" -c "raise SystemExit(1)"'
 
 # An unbraced control statement: the native analyzer flags MISRA Rule 15.6, which
 # is semantic-risk — like the signed/unsigned sentinel example, a minimal edit can
@@ -98,7 +108,7 @@ def test_test_gated_confirms_safe_but_not_risky(tmp_path):
     eng = LoopEngine(proj)
     sess = eng.begin_session(["src"], {"analyzers": ["native"],
                                        "verification_policy": "test_gated",
-                                       "test_command": "true"})
+                                       "test_command": PASS_CMD})
     sid = sess["session_id"]
     (proj / "src" / "m.c").write_text(CLEAN)
     v = eng.verify(sid)
@@ -117,7 +127,7 @@ def test_failing_tests_confirm_nothing(tmp_path):
     eng = LoopEngine(proj)
     sess = eng.begin_session(["src"], {"analyzers": ["native"],
                                        "verification_policy": "test_gated",
-                                       "test_command": "false"})  # always exits 1
+                                       "test_command": FAIL_CMD})  # always exits 1
     sid = sess["session_id"]
     (proj / "src" / "m.c").write_text(CLEAN)
     v = eng.verify(sid)
