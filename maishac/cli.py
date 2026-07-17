@@ -49,8 +49,18 @@ def cmd_scan(args):
 
 def cmd_check(args):
     eng = _engine(args)
-    code = sys.stdin.read() if args.file in ("-", None) else Path(args.file).read_text("utf-8")
-    name = "draft.c" if args.file in ("-", None) else args.file
+    if args.file in ("-", None):
+        code, name = sys.stdin.read(), "draft.c"
+    else:
+        # A missing/unreadable draft must fail cleanly, and odd byte encodings
+        # must not crash the linter (errors='replace'), matching the CLI's other
+        # input-handling paths.
+        try:
+            code = Path(args.file).read_text("utf-8", errors="replace")
+        except (FileNotFoundError, IsADirectoryError, PermissionError, OSError) as e:
+            print(f"Cannot read '{args.file}': {e}", file=sys.stderr)
+            sys.exit(1)
+        name = args.file
     _print(eng.check_snippet(code, name))
 
 

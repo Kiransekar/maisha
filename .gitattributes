@@ -1,0 +1,12 @@
+# Normalize line endings so the repo stores LF and cross-platform checkouts stay
+# consistent (this also silences the "LF will be replaced by CRLF" churn warnings
+# Windows contributors see). git auto-converts on checkout per platform.
+* text=auto
+
+# Shell scripts must always be LF, even on a Windows checkout, or they won't run.
+*.sh text eol=lf
+
+# Keep generated/exported data diffs readable as text.
+*.json text
+*.sarif text
+*.cff  text

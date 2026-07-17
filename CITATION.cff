@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use Maisha in your work, please cite it as below."
+title: "Maisha (maishac): an agent harness for MISRA C, BARR-C and CERT C compliance"
+abstract: >-
+  A deterministic orchestration layer (scanning, fingerprinting, persistent
+  memory, prioritization, and a verification gate) that sits underneath an LLM
+  agent for MISRA C:2012, BARR-C:2018 and CERT C compliance work. It is a
+  workflow orchestrator and audit-trail layer, not a qualified/certified
+  static-analysis tool, exposed as both a CLI and an MCP server.
+type: software
+authors:
+  - name: "Maisha contributors"
+repository-code: "https://github.com/Kiransekar/maisha"
+url: "https://github.com/Kiransekar/maisha"
+license: MIT
+version: "0.3.1"
+keywords:
+  - misra
+  - cert-c
+  - barr-c
+  - static-analysis
+  - mcp
+  - agent
+  - embedded
+  - functional-safety

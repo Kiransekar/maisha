@@ -10,6 +10,8 @@ so cli.py stops being a 0%-coverage blind spot.
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 
 import pytest
 
@@ -98,6 +100,32 @@ def test_check_from_file_and_guide(proj, capsys):
 
     out, _, code = run(_P(proj) + ["guide", "dynamic memory"], capsys)
     assert code == 0 and out["patterns"]
+
+
+def test_check_missing_file_fails_cleanly(proj, capsys):
+    """`maishac check` on a missing file exits 1 with a message, not a traceback."""
+    _, err, code = run(_P(proj) + ["check", "no-such-draft.c"], capsys)
+    assert code == 1
+    assert "cannot read" in err.lower()
+    assert "Traceback" not in err
+
+
+def test_check_tolerates_non_utf8_bytes(proj, capsys):
+    """A draft with non-UTF-8 bytes must not crash the linter (errors='replace')."""
+    draft = proj / "latin1.c"
+    draft.write_bytes(b"int x = 0; /* \xff\xfe caf\xe9 */\n")
+    out, _, code = run(_P(proj) + ["check", str(draft)], capsys)
+    assert code == 0
+    assert "clean" in out
+
+
+def test_python_dash_m_maishac_runs():
+    """`python -m maishac` works as an alias for the CLI (maishac/__main__.py)."""
+    from maishac import __version__
+    proc = subprocess.run([sys.executable, "-m", "maishac", "--version"],
+                          capture_output=True, text=True)
+    assert proc.returncode == 0
+    assert __version__ in proc.stdout
 
 
 def test_full_session_flow(proj, capsys):
