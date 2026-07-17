@@ -7,6 +7,7 @@ and attach the guideline via `relationships` into a `taxonomies` component
 baseline `absent` results, `defaultConfiguration` levels, and scheme-prefixed
 URIs. A naive importer keyed on `ruleId` breaks on all of these."""
 
+import json
 from pathlib import Path
 
 from maishac import report as report_mod
@@ -97,6 +98,33 @@ def test_uri_scheme_and_missing_region_are_tolerated():
     assert len(f) == 2
     assert not f[0].file.startswith("file://")  # scheme stripped
     assert f[0].line == 0                        # missing region tolerated
+
+
+def test_real_cppcheck_sarif_fixture_imports_and_maps(tmp_path):
+    """Issue #6: a REAL SARIF file emitted by cppcheck 2.17.1
+    (`--output-format=sarif --addon=misra`) on a seeded sample, paths sanitized.
+    Unlike the modeled dialects above, this is genuine engine output — including
+    a real-engine quirk (region startColumn 0, which the SARIF schema forbids)
+    that the importer must tolerate. Confirms the semantic-id and MISRA-number
+    mappings recover the right guidelines from a real toolchain."""
+    fixture = Path(__file__).parent / "fixtures" / "cppcheck_2.17_sample.sarif.json"
+    data = json.loads(fixture.read_text("utf-8"))
+    assert data["runs"][0]["tool"]["driver"]["name"] == "Cppcheck"
+
+    findings = report_mod.parse_sarif(data, tmp_path)
+    rules = {f.rule_id for f in findings}
+
+    # cppcheck semantic ids -> CERT rules
+    assert "CERT MEM31-C" in rules      # memleak
+    assert "CERT EXP34-C" in rules      # nullPointer
+    assert "CERT EXP33-C" in rules      # uninitvar
+    # cppcheck MISRA-addon ids -> MISRA rules (those the KB knows)
+    assert "MISRA-C:2012 Rule 8.4" in rules
+    assert "MISRA-C:2012 Rule 17.7" in rules
+    # a real id the KB does NOT curate is preserved, not silently dropped
+    assert "sarif:misra-c2012-11.5" in rules
+    # every mapped finding carries a location from the sanitized file
+    assert all(f.file == "src/sample.c" for f in findings)
 
 
 if __name__ == "__main__":
