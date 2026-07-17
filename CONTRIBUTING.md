@@ -8,7 +8,7 @@ patterns, or analyzer adapters. This guide shows you where.
 ## Quick start
 
 ```bash
-git clone https://github.com/Kiransekar/maisha.git
+git clone https://github.com/WinterLabsHQ/maisha.git
 cd maisha
 pip install -e ".[dev]"        # editable install + pytest
 python -m pytest -q            # 44 tests, should be green before you start

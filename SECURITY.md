@@ -41,7 +41,7 @@ still report it — we'll help route it upstream if needed.
 
 Please report security issues privately using **GitHub Security Advisories**:
 
-**https://github.com/Kiransekar/maisha/security/advisories/new**
+**https://github.com/WinterLabsHQ/maisha/security/advisories/new**
 
 Do not open a public issue for a suspected vulnerability.
 

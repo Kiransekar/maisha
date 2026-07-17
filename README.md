@@ -2,8 +2,8 @@
 
 # Maisha
 
-[![CI](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml/badge.svg)](https://github.com/Kiransekar/maisha/actions/workflows/ci.yml)
-&nbsp;[![Release](https://img.shields.io/badge/release-v0.3.2-blue)](https://github.com/Kiransekar/maisha/releases/tag/v0.3.2)
+[![CI](https://github.com/WinterLabsHQ/maisha/actions/workflows/ci.yml/badge.svg)](https://github.com/WinterLabsHQ/maisha/actions/workflows/ci.yml)
+&nbsp;[![Release](https://img.shields.io/badge/release-v0.3.2-blue)](https://github.com/WinterLabsHQ/maisha/releases/tag/v0.3.2)
 &nbsp;![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 &nbsp;![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -170,14 +170,14 @@ This installs the `maishac` CLI and the `maishac` Python package. Verify with
 clang-tidy are baked in, so no host setup):
 
 ```bash
-docker run --rm -v "$PWD:/work" ghcr.io/kiransekar/maisha scan src/
-docker run --rm -i ghcr.io/kiransekar/maisha serve      # MCP server over stdio
+docker run --rm -v "$PWD:/work" ghcr.io/winterlabshq/maisha scan src/
+docker run --rm -i ghcr.io/winterlabshq/maisha serve      # MCP server over stdio
 ```
 
 To hack on Maisha itself:
 
 ```bash
-git clone https://github.com/Kiransekar/maisha.git
+git clone https://github.com/WinterLabsHQ/maisha.git
 cd maisha
 pip install -e ".[dev]"   # editable install with pytest
 ```

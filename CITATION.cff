@@ -10,8 +10,8 @@ abstract: >-
 type: software
 authors:
   - name: "Maisha contributors"
-repository-code: "https://github.com/Kiransekar/maisha"
-url: "https://github.com/Kiransekar/maisha"
+repository-code: "https://github.com/WinterLabsHQ/maisha"
+url: "https://github.com/WinterLabsHQ/maisha"
 license: MIT
 version: "0.3.2"
 keywords:
