@@ -46,13 +46,25 @@ def test_native_analyzer_never_crashes_on_arbitrary_unicode(src):
     assert isinstance(findings, list)
 
 
-def test_strip_trailing_backslash_at_eof_preserves_length():
-    """Finding #3 (this cycle): a backslash as the final character inside a
-    string/char literal escapes nothing; the stripper must consume one char and
-    emit one, not emit two and grow the output (which desyncs column positions).
-    Regression pin for the property below, whose falsifying example was '"\\'."""
-    for src in ('"\\', "'\\", 'x = "abc\\', "c = '\\"):
-        assert len(strip_comments_strings(src)) == len(src)
+def _nl_positions(s):
+    return [i for i, c in enumerate(s) if c == "\n"]
+
+
+def test_strip_backslash_escapes_preserve_length_and_newlines():
+    """Two escape-handling bugs the fuzzer found in strip_comments_strings, pinned:
+      #3  a trailing backslash at EOF escapes nothing — must not grow the output;
+      #4  a backslash-escaped NEWLINE inside a literal (line continuation) must
+          keep its newline in the stripped view, or every later line/column
+          position shifts (CI falsifying example had a newline at index 2).
+    The stripper must preserve BOTH total length and every newline position."""
+    cases = [
+        '"\\', "'\\", 'x = "abc\\', "c = '\\",        # #3 trailing backslash
+        '"\\\n', "'\\\n'", 'a = "x\\\ny";\n', "'\\\n' + z",  # #4 escaped newline
+    ]
+    for src in cases:
+        out = strip_comments_strings(src)
+        assert len(out) == len(src), f"length changed for {src!r}"
+        assert _nl_positions(out) == _nl_positions(src), f"newline moved for {src!r}"
 
 
 @settings(max_examples=500, deadline=None)
