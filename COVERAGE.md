@@ -17,7 +17,7 @@ run everywhere. `cppcheck` (MISRA addon + CERT map) and `clang-tidy`
 (`cert-*`) extend detection when installed; whether a specific rule fires
 is up to that engine.
 
-## MISRA-C:2012 — 31 rules (19 detected with zero dependencies)
+## MISRA-C:2012 — 35 rules (19 detected with zero dependencies)
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
@@ -26,6 +26,7 @@ is up to that engine.
 | MISRA-C:2012 Rule 11.3 | required | critical | cppcheck | A pointer to one object type shall not be cast to a pointer to a different object type. |
 | MISRA-C:2012 Rule 14.4 | required | critical | cppcheck | Controlling expressions of if/while shall have essentially Boolean type. |
 | MISRA-C:2012 Rule 15.6 | required | critical | native, cppcheck | Bodies of if/else/loop statements shall be compound (brace-enclosed) blocks. |
+| MISRA-C:2012 Rule 16.1 | required | critical | cppcheck | All switch statements shall be well-formed (each clause terminated, a final default). |
 | MISRA-C:2012 Rule 16.4 | required | critical | native, cppcheck | Every switch statement shall have a default label. |
 | MISRA-C:2012 Rule 17.1 | required | critical | cppcheck | Features of <stdarg.h> shall not be used. |
 | MISRA-C:2012 Rule 17.2 | required | critical | native, cppcheck | Functions shall not call themselves directly or indirectly (no recursion). |
@@ -42,15 +43,18 @@ is up to that engine.
 | MISRA-C:2012 Rule 21.9 | required | critical | native, cppcheck | bsearch and qsort shall not be used. |
 | MISRA-C:2012 Rule 7.1 | required | critical | native, cppcheck | Octal constants shall not be used. |
 | MISRA-C:2012 Rule 7.3 | required | critical | native, cppcheck | A lowercase 'l' shall not be used as a literal suffix. |
+| MISRA-C:2012 Rule 8.2 | required | critical | cppcheck | Declare and define functions in prototype form, naming every parameter. |
 | MISRA-C:2012 Rule 8.4 | required | critical | cppcheck | External objects and functions need a compatible visible declaration before definition. |
 | MISRA-C:2012 Dir 4.4 | advisory | minor | native | Source code should not be left disabled inside comments. |
 | MISRA-C:2012 Dir 4.6 | advisory | minor | native | Prefer fixed-width typedefs (int32_t, uint8_t, ...) over basic numeric types. |
+| MISRA-C:2012 Rule 12.1 | advisory | minor | cppcheck | Make the precedence of operators within an expression explicit with parentheses. |
 | MISRA-C:2012 Rule 13.4 | advisory | minor | native, cppcheck | The result of an assignment operator should not be used as a value. |
 | MISRA-C:2012 Rule 15.1 | advisory | minor | native, cppcheck | The goto statement should not be used. |
 | MISRA-C:2012 Rule 15.5 | advisory | minor | cppcheck | A function should have a single point of exit at the end. |
 | MISRA-C:2012 Rule 19.2 | advisory | minor | native, cppcheck | The union keyword should not be used. |
 | MISRA-C:2012 Rule 20.5 | advisory | minor | native, cppcheck | #undef should not be used. |
 | MISRA-C:2012 Rule 4.2 | advisory | minor | native, cppcheck | Trigraphs should not be used. |
+| MISRA-C:2012 Rule 8.13 | advisory | minor | cppcheck | A pointer should point to a const-qualified type whenever the pointed-to object is not modified through it. |
 | MISRA-C:2012 Rule 8.7 | advisory | minor | cppcheck | Objects and functions referenced in only one translation unit should not have external linkage. |
 
 ## BARR-C:2018 — 20 rules (2 detected with zero dependencies)
@@ -113,4 +117,4 @@ is up to that engine.
 | CERT STR31-C | - | blocker | native, clang-tidy, cppcheck | Guarantee destination storage is large enough for string data plus the null terminator (gets/strcpy/strcat/sprintf are unbounded). |
 | CERT STR32-C | - | blocker | clang-tidy, cppcheck | Do not pass non-null-terminated character sequences to functions that expect strings. |
 
-_Total: 81 rules across 3 standards._
+_Total: 85 rules across 3 standards._
