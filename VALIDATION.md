@@ -283,9 +283,14 @@ These restate and reconfirm the project's own honest framing:
 - **Not a qualified/certified tool** (see §0). The engines carry no qualification
   kit. Certification requires a qualified engine (Astrée/Polyspace/Helix QAC/…)
   and an accredited assessor; Maisha layers on top via SARIF import.
-- **Coverage is ~86 curated rules** across three standards (35 MISRA C:2012,
+- **Coverage is ~102 curated rules** across three standards (51 MISRA C:2012,
   20 BARR-C:2018, 31 CERT C) — a fraction of the full standards; detection is
-  bounded by the engines, not the curated set.
+  bounded by the engines, not the curated set. 77 are enforced (an analyzer
+  detects them); 25 are reference-only entries.
+- **MISRA C:2012 scope is the base standard plus Amendments 1 and 2.** That
+  matches what cppcheck's free MISRA addon implements, so every enforced MISRA
+  rule keeps an external cross-check. Amendment 3/4 guidelines (including the
+  concurrency directives and §23 generic selections) are not carried.
 - **The verification gate trades human effort for safety**: on typical MISRA
   findings, `test_gated` behaves almost like `human_gated` (most rule categories
   are semantic-risk). Budget for human review of nearly every fix.
