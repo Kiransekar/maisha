@@ -1,5 +1,6 @@
 """Maisha command line interface.
 
+    maishac doctor                        diagnose install, toolchain and coverage
     maishac scan src/                     scan + sync memory
     maishac guide "dynamic memory"        author-time: the compliant idiom to reach for
     maishac check draft.c                 lint a draft in memory (no store); '-' = stdin
@@ -170,6 +171,18 @@ def cmd_deviate(args):
     _print({"deviation_id": did, "rule_id": meta["id"]})
 
 
+def cmd_doctor(args):
+    from . import doctor
+    report = doctor.diagnose(getattr(args, "project", None) or os.getcwd())
+    if args.json:
+        _print(report)
+    else:
+        print(doctor.render(report))
+    # Non-zero on errors so CI can gate on a usable toolchain. Warnings are
+    # informational — a native-only install is legitimate, just narrower.
+    sys.exit(0 if report["healthy"] else 1)
+
+
 def cmd_suppress(args):
     eng = _engine(args)
     eng.mem.suppress(args.fingerprint, args.reason)
@@ -255,6 +268,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--rationale", "-r", required=True, help="why (agreed by acquirer/supplier)")
     s.add_argument("--approver", default="")
     s.set_defaults(fn=cmd_recategorize)
+
+    s = sub.add_parser("doctor", help="Diagnose install, analyzer toolchain, rule "
+                                      "coverage on this machine, and project memory")
+    s.add_argument("--json", action="store_true", help="machine-readable output")
+    s.set_defaults(fn=cmd_doctor)
 
     s = sub.add_parser("rule", help="Explain a rule")
     s.add_argument("rule")

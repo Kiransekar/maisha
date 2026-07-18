@@ -28,6 +28,7 @@ python tools/gen_coverage.py   # regenerate COVERAGE.md from the rule registry
 CLI entry point (`maishac`, defined in `maishac/cli.py`):
 
 ```bash
+maishac doctor                    # diagnose install, toolchain, reachable rules
 maishac scan src/                 # one-shot scan, syncs memory
 maishac findings --limit 20       # ranked open findings
 maishac rule "MISRA 21.3"         # explain a rule + cross-standard refs

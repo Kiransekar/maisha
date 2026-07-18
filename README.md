@@ -206,6 +206,8 @@ native analyzer always works. Run `maishac scan` once and check
 ```bash
 cd your-firmware-project
 
+maishac doctor                     # what will this machine actually detect?
+
 maishac scan src/                  # one-shot scan, syncs memory
 # headers outside src/ (e.g. a vendor SDK or FreeRTOSConfig.h)? forward them:
 maishac scan src/ --include include/ --include vendor/sdk/inc
