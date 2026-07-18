@@ -27,6 +27,7 @@ from pathlib import Path
 from .rules import REGISTRY
 from .analyzers.cppcheck import CPPCHECK_TO_CERT, CPPCHECK_MISRA_IMPLEMENTED
 from .analyzers.clang_tidy import CLANG_TIDY_CERT_RULES
+from .analyzers.compiler import WFLAG_TO_RULE
 
 _NATIVE_SRC = Path(__file__).resolve().parent / "analyzers" / "native.py"
 _RULE_QUERY = re.compile(r'"((?:MISRA|CERT|BARR)[^"]*)"')
@@ -81,6 +82,18 @@ def analyzers_for(rule_id: str, native: set[str] | None = None) -> list[str]:
             out.append("clang-tidy")
         if num in set(CPPCHECK_TO_CERT.values()):
             out.append("cppcheck")
+    if rid in _compiler_ids():
+        out.append("compiler")
+    return out
+
+
+def _compiler_ids() -> set[str]:
+    """Canonical ids the gcc/clang warning adapter maps a -W flag onto."""
+    out = set()
+    for ref in WFLAG_TO_RULE.values():
+        meta = REGISTRY.resolve(ref)
+        if meta:
+            out.add(meta["id"])
     return out
 
 

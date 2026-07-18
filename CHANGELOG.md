@@ -6,6 +6,19 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **`maishac doctor`** — diagnoses the install, analyzer toolchain, knowledge
+  base and project memory. The question it answers is not "is Maisha
+  installed" but *"what will this machine actually detect, and what am I
+  losing?"* Because the native analyzer is zero-dependency while the semantic
+  rules are delegated to cppcheck and clang-tidy, the same command on two
+  machines can produce very different coverage silently. `doctor` quantifies
+  that per standard — e.g. "31/77 enforced rules detectable here; 43 lost
+  without cppcheck" — before anyone reads a clean scan as a compliance result.
+  It probes specifically for cppcheck installed *without* its MISRA addon,
+  which is common in distro packages and removes every MISRA finding without
+  any error, and runs a SQLite integrity check on the audit trail. `--json`
+  for machine use; exits non-zero only on real errors, so a deliberately
+  native-only install still passes CI.
 - **The MISRA Mandatory guideline set — 16 rules, KB 86 → 102.** Mandatory is
   the one MISRA category that admits *no* deviation, and the knowledge base
   previously contained none of it, which left the engine's mandatory-blocking
@@ -35,6 +48,15 @@ All notable changes to Maisha are documented here. Format loosely follows
   stated, as a Guideline Enforcement Plan requires.
 
 ### Fixed
+- **The gcc/clang warning adapter was missing from the coverage map.** It maps
+  six rules (18.8, 16.4, 17.7, FLP37-C, EXP33-C, INT31-C) that `COVERAGE.md`
+  credited to no analyzer at all.
+- **One broken cross-standard reference**: MISRA 15.5 pointed at `BARR-C 6.4`,
+  which does not resolve, silently dropping the equivalence from findings. The
+  other 13 unresolved references are intentional — they point at CERT
+  *Recommendations* (ids numbered 00-29), which are non-normative and
+  deliberately outside the curated subset, and `doctor` now reports them as
+  such rather than as defects.
 - **`COVERAGE.md` over-claimed external analyzer coverage.** The generator
   credited *every* CERT rule to clang-tidy and *every* MISRA Rule to cppcheck.
   clang-tidy ships 18 `cert-*` checks that map to CERT Rules, not 31; cppcheck's

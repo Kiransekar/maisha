@@ -50,11 +50,11 @@ carried for cross-referencing, deviation records and SARIF import.
 | MISRA-C:2012 Rule 14.4 | required | critical | cppcheck | Controlling expressions of if/while shall have essentially Boolean type. |
 | MISRA-C:2012 Rule 15.6 | required | critical | native, cppcheck | Bodies of if/else/loop statements shall be compound (brace-enclosed) blocks. |
 | MISRA-C:2012 Rule 16.1 | required | critical | cppcheck | All switch statements shall be well-formed (each clause terminated, a final default). |
-| MISRA-C:2012 Rule 16.4 | required | critical | native, cppcheck | Every switch statement shall have a default label. |
+| MISRA-C:2012 Rule 16.4 | required | critical | native, cppcheck, compiler | Every switch statement shall have a default label. |
 | MISRA-C:2012 Rule 17.1 | required | critical | cppcheck | Features of <stdarg.h> shall not be used. |
 | MISRA-C:2012 Rule 17.2 | required | critical | native (partial), cppcheck | Functions shall not call themselves directly or indirectly (no recursion). |
-| MISRA-C:2012 Rule 17.7 | required | critical | cppcheck | The value returned by a non-void function shall be used or explicitly discarded. |
-| MISRA-C:2012 Rule 18.8 | required | critical | native, cppcheck | Variable-length arrays shall not be used. |
+| MISRA-C:2012 Rule 17.7 | required | critical | cppcheck, compiler | The value returned by a non-void function shall be used or explicitly discarded. |
+| MISRA-C:2012 Rule 18.8 | required | critical | native, cppcheck, compiler | Variable-length arrays shall not be used. |
 | MISRA-C:2012 Rule 20.4 | required | critical | cppcheck | A macro shall not share its name with a language keyword. |
 | MISRA-C:2012 Rule 21.10 | required | critical | cppcheck | Date/time facilities of <time.h> shall not be used. |
 | MISRA-C:2012 Rule 21.3 | required | critical | native, cppcheck | malloc/calloc/realloc/free from <stdlib.h> shall not be used. |
@@ -117,16 +117,16 @@ carried for cross-referencing, deviation records and SARIF import.
 | CERT ENV33-C | - | blocker | native, clang-tidy | Do not invoke command processors via system(). |
 | CERT ERR33-C | - | critical | clang-tidy, cppcheck | Detect and handle standard library errors (check return values). |
 | CERT ERR34-C | - | critical | native, clang-tidy | Detect errors when converting strings to numbers (atoi cannot report failure). |
-| CERT EXP33-C | - | blocker | cppcheck | Do not read uninitialized memory. |
+| CERT EXP33-C | - | blocker | cppcheck, compiler | Do not read uninitialized memory. |
 | CERT EXP34-C | - | blocker | cppcheck | Do not dereference null pointers. |
 | CERT EXP39-C | - | critical | **not detected** | Do not access an object through a pointer of an incompatible type. |
 | CERT EXP45-C | - | major | clang-tidy | Do not perform assignments inside selection or iteration condition expressions. |
 | CERT FIO30-C | - | blocker | **not detected** | Never pass externally influenced data as a printf-family format string. |
 | CERT FIO34-C | - | critical | **not detected** | Distinguish characters read from a file from EOF/WEOF. |
 | CERT FLP32-C | - | critical | cppcheck | Prevent or detect domain and range errors in floating-point math functions. |
-| CERT FLP37-C | - | major | native, clang-tidy | Do not compare floating-point values with == or != for equality. |
+| CERT FLP37-C | - | major | native, clang-tidy, compiler | Do not compare floating-point values with == or != for equality. |
 | CERT INT30-C | - | critical | **not detected** | Ensure unsigned integer operations do not wrap unintentionally. |
-| CERT INT31-C | - | critical | cppcheck | Ensure integer conversions do not lose or misinterpret data. |
+| CERT INT31-C | - | critical | cppcheck, compiler | Ensure integer conversions do not lose or misinterpret data. |
 | CERT INT32-C | - | critical | cppcheck | Ensure signed integer operations do not overflow (undefined behavior). |
 | CERT INT33-C | - | critical | cppcheck | Ensure division and remainder operations cannot divide by zero. |
 | CERT MEM30-C | - | blocker | cppcheck | Do not access memory after it has been freed. |
