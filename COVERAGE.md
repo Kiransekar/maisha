@@ -24,15 +24,15 @@ construct, so treat the external columns as an upper bound. `**not
 detected**` means no engine we know of covers the rule: the entry is
 carried for cross-referencing, deviation records and SARIF import.
 
-## MISRA-C:2012 — 51 rules (19 detected with zero dependencies)
+## MISRA-C:2012 — 51 rules (22 detected with zero dependencies)
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
-| MISRA-C:2012 Rule 12.5 | mandatory | blocker | **not detected** | sizeof must not be applied to a function parameter declared as an array. |
-| MISRA-C:2012 Rule 13.6 | mandatory | blocker | cppcheck | The operand of sizeof must not contain any side effect. |
+| MISRA-C:2012 Rule 12.5 | mandatory | blocker | native | sizeof must not be applied to a function parameter declared as an array. |
+| MISRA-C:2012 Rule 13.6 | mandatory | blocker | native, cppcheck | The operand of sizeof must not contain any side effect. |
 | MISRA-C:2012 Rule 17.3 | mandatory | blocker | cppcheck | A function must not be called without a visible prototype in scope. |
 | MISRA-C:2012 Rule 17.4 | mandatory | blocker | cppcheck | Every exit path of a non-void function must return a value explicitly. |
-| MISRA-C:2012 Rule 17.6 | mandatory | blocker | cppcheck | An array parameter's brackets must not contain 'static' or a type qualifier. |
+| MISRA-C:2012 Rule 17.6 | mandatory | blocker | native, cppcheck | An array parameter's brackets must not contain 'static' or a type qualifier. |
 | MISRA-C:2012 Rule 19.1 | mandatory | blocker | cppcheck | An object must not be assigned or copied to an object whose storage overlaps it. |
 | MISRA-C:2012 Rule 21.13 | mandatory | blocker | cppcheck | An argument to a <ctype.h> function must be representable as unsigned char or be EOF. |
 | MISRA-C:2012 Rule 21.17 | mandatory | blocker | cppcheck | A <string.h> function must not read or write beyond the bounds of the objects it is given. |
