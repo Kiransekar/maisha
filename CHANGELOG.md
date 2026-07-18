@@ -5,6 +5,56 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- **The MISRA Mandatory guideline set — 16 rules, KB 86 → 102.** Mandatory is
+  the one MISRA category that admits *no* deviation, and the knowledge base
+  previously contained none of it, which left the engine's mandatory-blocking
+  paths as dead code. Scope is MISRA C:2012 + Amendments 1 and 2 (9.1, 12.5,
+  13.6, 17.3, 17.4, 17.6, 19.1, 21.13, 21.17–21.20, 22.2, 22.4–22.6), matching
+  what cppcheck's free MISRA addon covers so every enforced rule keeps an
+  external cross-check.
+- **Native detection for three Mandatory rules**: 12.5 (`sizeof` on an array
+  parameter, which has decayed to a pointer), 13.6 (side effects in a `sizeof`
+  operand, which is never evaluated), and 17.6 (`static`/qualifier inside array
+  parameter brackets). Zero findings across the 334-file benchmark corpus
+  (littlefs, lwip, mbedtls, zephyr) with unit tests covering the positives.
+- **Deviations against Mandatory guidelines are now refused** (`MandatoryRuleError`),
+  enforced in `MemoryStore.add_deviation` so neither the CLI nor the MCP server
+  can route around it. Recategorisation away from Mandatory was already blocked.
+- **Decidability metadata on every MISRA rule** (`decidable`, `scope`). This is
+  what makes "not detected" explainable rather than bare: an Undecidable/System
+  rule is out of a lexical analyzer's reach by construction, not by omission.
+- **Enforced/reference rule tiers** (`maishac/coverage.py`). A rule is
+  *enforced* if some analyzer detects it and must carry an authoring pattern;
+  *reference* rules are carried for cross-standard equivalence, deviation
+  records, GEP rows and SARIF import mapping, and need only summary + fix. The
+  previous one-pattern-per-rule invariant could not have survived KB growth.
+- **Partial-coverage declarations** (`NATIVE_PARTIAL`). MISRA 17.2 is detected
+  natively for *direct* self-recursion only; mutual recursion needs a call
+  graph. `COVERAGE.md` now renders that as `native (partial)` with the residual
+  stated, as a Guideline Enforcement Plan requires.
+
+### Fixed
+- **`COVERAGE.md` over-claimed external analyzer coverage.** The generator
+  credited *every* CERT rule to clang-tidy and *every* MISRA Rule to cppcheck.
+  clang-tidy ships 18 `cert-*` checks that map to CERT Rules, not 31; cppcheck's
+  MISRA addon implements a specific 155-rule set (missing 1.1, 3.2, 12.5) and
+  covers MISRA C:2012+AMD1/2 only. Both are now closed lists derived from what
+  those tools publish, so five CERT rules correctly moved to "not detected".
+  This was an accuracy bug in the one document whose stated purpose is to make
+  no silent coverage claim.
+
+### Changed
+- MISRA 17.4 is carried as a knowledge-base rule but deliberately **not**
+  implemented natively. A lexical version produced 69 findings on the benchmark
+  corpus, dominated by macro-wrapped returns (`MBEDTLS_MPS_TRACE_RETURN`) and
+  noreturn exit calls; a macro-shaped guard suppressed only 13 of them. It needs
+  a control-flow graph, which cppcheck's core checker has.
+- MISRA 13.6's native check no longer treats bare call syntax inside `sizeof` as
+  a side effect — without preprocessing, `F(x)` may be a macro expanding to a
+  pure cast (lwip's `sizeof(ip_2_ip6(&x)->addr)`), which made that arm produce
+  only false positives.
+
 ## [0.3.2] - 2026-07-17
 
 ### Added

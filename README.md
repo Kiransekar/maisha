@@ -79,7 +79,7 @@ does everything that must never hallucinate:
   Advisory/Disapplied), plus honest disclosure of which guidelines are *not
   checked*.
 
-The three rule knowledge bases (**86 rules** — 35 MISRA C:2012, 20 BARR-C:2018,
+The three rule knowledge bases (**102 rules** — 51 MISRA C:2012, 20 BARR-C:2018,
 31 CERT C) contain **original paraphrased
 summaries** written for this project — no standard text is reproduced. For
 authoritative wording you still need the official MISRA / BARR / SEI CERT documents.
@@ -104,8 +104,11 @@ authoritative wording you still need the official MISRA / BARR / SEI CERT docume
   qualification kit. DO-178C / ISO 26262 / IEC 62304 generally require the
   analysis tool *itself* to be qualified or proven-in-use; Maisha does not
   meet that bar and does not claim to.
-- **Not complete rule coverage.** 86 curated rules across three standards is a
+- **Not complete rule coverage.** 102 curated rules across three standards is a
   fraction of MISRA C:2012 (180+ rules/directives with amendments) or CERT C.
+  Of those, 77 are *enforced* (some analyzer detects them) and 25 are
+  *reference* entries carried for cross-standard equivalence, deviation records
+  and SARIF import — they are not something Maisha finds for you.
   Detection is bounded by the underlying engines, not the curated set. Every
   covered rule and which analyzer backs it is listed in
   [COVERAGE.md](COVERAGE.md) (generated from the code, so gaps are explicit).
