@@ -6,6 +6,7 @@ from pathlib import Path
 
 from maishac.engine import LoopEngine
 from maishac import report as report_mod
+from maishac.rules import REGISTRY
 
 FIXTURE = Path(__file__).resolve().parent.parent / "examples" / "bad.c"
 
@@ -24,8 +25,10 @@ def test_fresh_scan_is_non_compliant_with_coverage_disclosed(tmp_path):
     s = report_mod.misra_compliance_summary(eng.mem)
     assert s["verdict"].startswith("NON-COMPLIANT")
     assert s["counts"]["violations"] > 0
-    # Coverage is disclosed honestly, never counted as compliant.
-    assert s["enforced"] == 35 and s["not_checked"] > 0
+    # Coverage is disclosed honestly, never counted as compliant. Derived from
+    # the KB rather than hardcoded, so growing the rule set doesn't fail this.
+    assert s["enforced"] == len(REGISTRY.all_ids("MISRA-C:2012"))
+    assert s["not_checked"] > 0
     assert s["enforced"] + s["not_checked"] == s["universe"]
 
 
