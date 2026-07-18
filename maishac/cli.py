@@ -29,6 +29,7 @@ from pathlib import Path
 
 from . import __version__
 from .engine import LoopEngine
+from .memory import MandatoryRuleError
 from .rules import REGISTRY
 from . import report as report_mod
 
@@ -160,8 +161,12 @@ def cmd_deviate(args):
         except ValueError:
             print(f"--expires must be YYYY-MM-DD (got '{args.expires}')", file=sys.stderr)
             sys.exit(1)
-    did = eng.mem.add_deviation(meta["id"], args.scope, args.justification,
-                                args.approver, args.expires_days or None, expires_at)
+    try:
+        did = eng.mem.add_deviation(meta["id"], args.scope, args.justification,
+                                    args.approver, args.expires_days or None, expires_at)
+    except MandatoryRuleError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
     _print({"deviation_id": did, "rule_id": meta["id"]})
 
 
