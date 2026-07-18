@@ -26,6 +26,10 @@ from typing import Optional
 
 from ..model import Finding
 
+
+class MandatoryRuleError(ValueError):
+    """Raised when something tries to waive a MISRA Mandatory guideline."""
+
 # A fix to one of these is behavior-changing at edge cases (sentinel values,
 # saturation limits, sign boundaries) in a way NO static rescan can catch — the
 # rule only checks that the pattern is gone, never that the specific edit kept
@@ -332,6 +336,20 @@ class MemoryStore:
     def add_deviation(self, rule_id: str, scope: str, justification: str,
                       approver: str = "", expires_days: float | None = None,
                       expires_at: float | None = None) -> str:
+        """Record a formal deviation permit.
+
+        Raises MandatoryRuleError for MISRA Mandatory guidelines. MISRA
+        Compliance:2020 is unambiguous that Mandatory guidelines admit no
+        deviation whatsoever — the only permitted compliance state is
+        Compliant, reached by actually fixing the code. The guard lives here
+        rather than in the CLI/MCP layers so no caller can route around it.
+        """
+        from ..rules import REGISTRY
+        meta = REGISTRY.get(rule_id) or REGISTRY.resolve(rule_id)
+        if meta and meta.get("category") == "mandatory":
+            raise MandatoryRuleError(
+                f"{meta['id']} is a MISRA Mandatory guideline; deviations are "
+                "not permitted against it. It must be fixed, not waived.")
         did = uuid.uuid4().hex[:12]
         expires = expires_at if expires_at is not None else (
             time.time() + expires_days * 86400 if expires_days else None)

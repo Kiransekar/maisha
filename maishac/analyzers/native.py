@@ -116,6 +116,45 @@ _BASIC_TYPE_DECL_RE = re.compile(r"^\s*(?:static\s+|const\s+|volatile\s+|extern\
 _COMMENTED_CODE_RE = re.compile(r"(;|\{|\}|\breturn\b|=)")
 _PREPROC_RE = re.compile(r"^\s*#")
 
+# --- MISRA Mandatory rules (no deviation is permitted against these) ---------
+# `static`/qualifier inside an array parameter's brackets (Rule 17.6). The \b
+# after each keyword matters: it stops `buf[static_offset]` matching, since an
+# underscore is a word character.
+_ARRAY_PARAM_QUAL_RE = re.compile(r"\[\s*(static|const|volatile|restrict)\b")
+# A sizeof operand, non-nested plus one level of nesting — enough for the
+# constructs that actually appear (`sizeof(x++)`, `sizeof(f(a))`, `sizeof(a[i])`).
+_SIZEOF_RE = re.compile(r"\bsizeof\s*\(((?:[^()]|\([^()]*\))*)\)")
+# Side effects inside that operand (Rule 13.6): increment, decrement, or an
+# assignment. Deliberately does NOT treat call syntax as a side effect: without
+# preprocessing we cannot tell a real function call from a macro that expands to
+# a pure cast or member access, and lwip's `sizeof(ip_2_ip6(&x)->addr)` idiom
+# made that arm produce nothing but false positives on the benchmark corpus.
+# Real calls inside sizeof are left to cppcheck, which has the expansion.
+_SIZEOF_SIDE_EFFECT_RE = re.compile(r"\+\+|--|(?<![=!<>+\-*/%&|^])=(?!=)")
+# Rule 17.4 (every path of a non-void function returns a value) is Mandatory and
+# Decidable, but deliberately NOT implemented here. A lexical version flags any
+# function with no visible `return <expr>`, which on the benchmark corpus meant
+# 69 hits across littlefs/lwip/mbedtls/zephyr — dominated by macro-wrapped
+# returns (mbedtls's MBEDTLS_MPS_TRACE_RETURN) and noreturn exit calls. A
+# macro-shaped guard only suppressed 13 of the 69, so this needs a real control
+# flow graph, not a better regex. cppcheck delegates 17.4 to its core checker,
+# which has one; the KB carries the rule for that path and for deviation records.
+
+
+def _array_param_names(decl: str) -> set[str]:
+    """Names of parameters declared in array form, from a function-definition
+    line. These decay to pointers, so sizeof on them is Rule 12.5."""
+    try:
+        params = decl[decl.index("(") + 1:decl.rindex(")")]
+    except ValueError:
+        return set()
+    out = set()
+    for part in params.split(","):
+        m = re.search(r"\b([A-Za-z_]\w*)\s*\[", part)
+        if m:
+            out.add(m.group(1))
+    return out
+
 
 def _next_significant(lines: list[str], start_idx: int) -> str | None:
     """First line at/after start_idx (0-based) that isn't blank or a
@@ -178,8 +217,11 @@ class NativeAnalyzer(Analyzer):
         clean_lines = clean.splitlines()
         add = lambda rule, ln, msg: out.append(x) if (x := self._mk(rule, f, root, ln, raw_lines, msg)) else None
 
-        func_stack: list[list] = []  # [name, depth_at_open], current function is func_stack[-1]
-        pending_func_name: str | None = None
+        # Current function is func_stack[-1]. Entries carry the state the
+        # Mandatory checks need: whether the function returns a value (17.4) and
+        # which of its parameters are declared in array form (12.5).
+        func_stack: list[dict] = []
+        pending_func: dict | None = None
         switch_stack: list[tuple[int, int, bool]] = []  # (start_line, depth_at_open, saw_default)
         depth = 0
 
@@ -244,13 +286,36 @@ class NativeAnalyzer(Analyzer):
             # O(functions x lines), which made large files (thousands of
             # functions) unusably slow (see BENCHMARK-SUITE-REPORT.md).
             if func_stack:
-                cur_name = func_stack[-1][0]
+                cur_name = func_stack[-1]["name"]
                 if re.search(rf"(?<![\w.]){re.escape(cur_name)}\s*\(", line) and not _FUNC_DEF_RE.match(line):
                     add("MISRA 17.2", i, f"direct recursion: '{cur_name}' calls itself")
 
+            # MISRA 17.6 (mandatory): static/qualifier in array parameter brackets
+            qm = _ARRAY_PARAM_QUAL_RE.search(line)
+            if qm and "(" in line:
+                add("MISRA 17.6", i,
+                    f"'{qm.group(1)}' inside array parameter brackets")
+
+            # MISRA 13.6 (mandatory) and 12.5 (mandatory): sizeof operands
+            for sm in _SIZEOF_RE.finditer(line):
+                operand = sm.group(1)
+                if _SIZEOF_SIDE_EFFECT_RE.search(operand):
+                    add("MISRA 13.6", i,
+                        f"side effect in sizeof operand '{operand.strip()}' "
+                        "— sizeof does not evaluate it")
+                if func_stack:
+                    name = operand.strip()
+                    if name in func_stack[-1]["array_params"]:
+                        add("MISRA 12.5", i,
+                            f"sizeof applied to array parameter '{name}' "
+                            "— it decayed to a pointer")
+
             fm = _FUNC_DEF_RE.match(line)
             if fm and not line.strip().startswith(("if", "for", "while", "switch", "return", "else")):
-                pending_func_name = fm.group(1)
+                pending_func = {
+                    "name": fm.group(1), "start": i,
+                    "array_params": _array_param_names(line),
+                }
 
             # float equality: crude but effective — == or != on a line mentioning float vars is
             # too noisy; instead flag literal float comparisons like `x == 0.1`
@@ -259,10 +324,11 @@ class NativeAnalyzer(Analyzer):
 
             # switch/default tracking
             depth += line.count("{") - line.count("}")
-            if pending_func_name is not None and "{" in line:
-                func_stack.append([pending_func_name, depth])
-                pending_func_name = None
-            while func_stack and func_stack[-1][1] > depth:
+            if pending_func is not None and "{" in line:
+                pending_func["depth"] = depth
+                func_stack.append(pending_func)
+                pending_func = None
+            while func_stack and func_stack[-1]["depth"] > depth:
                 func_stack.pop()
             if re.search(r"\bswitch\s*\(", line):
                 switch_stack.append([i, depth, False])  # type: ignore[list-item]

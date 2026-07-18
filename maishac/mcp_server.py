@@ -17,7 +17,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from .engine import LoopEngine
-from .memory import MemoryStore
+from .memory import MemoryStore, MandatoryRuleError
 from .rules import REGISTRY
 from . import report as report_mod
 
@@ -314,8 +314,11 @@ def compliance_add_deviation(rule: str, scope: str, justification: str,
         return _j({"error": f"Unknown rule '{rule}'."})
     if len(justification.strip()) < 15:
         return _j({"error": "Justification too short; write a real engineering rationale."})
-    did = _engine().mem.add_deviation(meta["id"], scope, justification, approver,
-                                       expires_days or None)
+    try:
+        did = _engine().mem.add_deviation(meta["id"], scope, justification, approver,
+                                          expires_days or None)
+    except MandatoryRuleError as e:
+        return _j({"error": str(e)})
     return _j({"deviation_id": did, "rule_id": meta["id"], "scope": scope,
                "note": "Re-run compliance_scan or compliance_verify to apply."})
 

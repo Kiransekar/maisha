@@ -24,10 +24,26 @@ construct, so treat the external columns as an upper bound. `**not
 detected**` means no engine we know of covers the rule: the entry is
 carried for cross-referencing, deviation records and SARIF import.
 
-## MISRA-C:2012 — 35 rules (19 detected with zero dependencies)
+## MISRA-C:2012 — 51 rules (22 detected with zero dependencies)
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
+| MISRA-C:2012 Rule 12.5 | mandatory | blocker | native | sizeof must not be applied to a function parameter declared as an array. |
+| MISRA-C:2012 Rule 13.6 | mandatory | blocker | native, cppcheck | The operand of sizeof must not contain any side effect. |
+| MISRA-C:2012 Rule 17.3 | mandatory | blocker | cppcheck | A function must not be called without a visible prototype in scope. |
+| MISRA-C:2012 Rule 17.4 | mandatory | blocker | cppcheck | Every exit path of a non-void function must return a value explicitly. |
+| MISRA-C:2012 Rule 17.6 | mandatory | blocker | native, cppcheck | An array parameter's brackets must not contain 'static' or a type qualifier. |
+| MISRA-C:2012 Rule 19.1 | mandatory | blocker | cppcheck | An object must not be assigned or copied to an object whose storage overlaps it. |
+| MISRA-C:2012 Rule 21.13 | mandatory | blocker | cppcheck | An argument to a <ctype.h> function must be representable as unsigned char or be EOF. |
+| MISRA-C:2012 Rule 21.17 | mandatory | blocker | cppcheck | A <string.h> function must not read or write beyond the bounds of the objects it is given. |
+| MISRA-C:2012 Rule 21.18 | mandatory | blocker | cppcheck | The size_t argument passed to a <string.h> function must be within the bounds of the object. |
+| MISRA-C:2012 Rule 21.19 | mandatory | blocker | cppcheck | Pointers returned by localeconv, getenv, setlocale or strerror must be treated as pointing to const-qualified data. |
+| MISRA-C:2012 Rule 21.20 | mandatory | blocker | cppcheck | A pointer returned by certain environment/time library functions must not be used after a later call invalidates it. |
+| MISRA-C:2012 Rule 22.2 | mandatory | blocker | cppcheck | A block of memory may only be freed if it was allocated dynamically, and it must be freed exactly once. |
+| MISRA-C:2012 Rule 22.4 | mandatory | blocker | cppcheck | No attempt may be made to write to a stream opened read-only. |
+| MISRA-C:2012 Rule 22.5 | mandatory | blocker | cppcheck | A pointer to a FILE object must not be dereferenced. |
+| MISRA-C:2012 Rule 22.6 | mandatory | blocker | cppcheck | A pointer to a FILE object must not be used after the stream is closed. |
+| MISRA-C:2012 Rule 9.1 | mandatory | blocker | cppcheck | An automatic object must be assigned a value before it is read. |
 | MISRA-C:2012 Dir 4.12 | required | critical | **not detected** | Dynamic memory allocation shall not be used. |
 | MISRA-C:2012 Rule 10.1 | required | critical | cppcheck | Operands shall have an appropriate essential type for the operator. |
 | MISRA-C:2012 Rule 11.3 | required | critical | cppcheck | A pointer to one object type shall not be cast to a pointer to a different object type. |
@@ -125,4 +141,4 @@ carried for cross-referencing, deviation records and SARIF import.
 | CERT STR31-C | - | blocker | native, cppcheck | Guarantee destination storage is large enough for string data plus the null terminator (gets/strcpy/strcat/sprintf are unbounded). |
 | CERT STR32-C | - | blocker | cppcheck | Do not pass non-null-terminated character sequences to functions that expect strings. |
 
-_Total: 86 rules across 3 standards._
+_Total: 102 rules across 3 standards._

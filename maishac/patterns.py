@@ -59,7 +59,7 @@ PATTERNS: list[dict] = [
         "concern": "function prototypes and parameter names",
         "keywords": ["prototype", "function declaration", "parameter name",
                      "K&R", "empty parentheses", "void parameter", "forward declaration"],
-        "rules": ["MISRA 8.2"],
+        "rules": ["MISRA 8.2", "MISRA 17.3", "MISRA 17.6"],
         "avoid": "int  process();          /* no prototype: accepts any arguments */\n"
                  "void init() { }          /* empty () means 'unspecified', not 'none' */",
         "prefer": "int  process(int32_t id, uint8_t mode);   /* full prototype, named */\n"
@@ -150,7 +150,8 @@ PATTERNS: list[dict] = [
         "concern": "string buffers and copying",
         "keywords": ["strcpy", "strcat", "sprintf", "gets", "buffer", "string",
                      "char array", "null terminator"],
-        "rules": ["CERT STR31-C", "CERT STR32-C", "MISRA 21.6"],
+        "rules": ["CERT STR31-C", "CERT STR32-C", "MISRA 21.6", "MISRA 21.17",
+                  "MISRA 21.18"],
         "avoid": "char name[16];\nstrcpy(name, input);   /* no bound: overflow */",
         "prefer": "char name[16];\n"
                   "(void)snprintf(name, sizeof name, \"%s\", input);  /* bounded, "
@@ -260,7 +261,8 @@ PATTERNS: list[dict] = [
         "concern": "free discipline (double-free, dangling, escaping addresses)",
         "keywords": ["free", "double free", "use after free", "dangling",
                      "return address", "return pointer", "local", "size overflow"],
-        "rules": ["CERT MEM31-C", "CERT MEM34-C", "CERT MEM35-C", "CERT DCL30-C"],
+        "rules": ["CERT MEM31-C", "CERT MEM34-C", "CERT MEM35-C", "CERT DCL30-C",
+                  "MISRA 22.2"],
         "avoid": "free(p);\nfree(p);          /* double free: heap corruption */\nreturn &local;    /* address escapes its lifetime */",
         "prefer": "free(p);\np = NULL;          /* free exactly once, then poison */\n"
                   "/* return by value, or write into a caller-owned buffer — never &local */",
@@ -272,7 +274,7 @@ PATTERNS: list[dict] = [
         "concern": "uninitialized variables",
         "keywords": ["uninitialized", "garbage value", "read before write",
                      "initialize", "declaration"],
-        "rules": ["CERT EXP33-C"],
+        "rules": ["CERT EXP33-C", "MISRA 9.1"],
         "avoid": "uint32_t crc;\nupdate(&crc);   /* update reads crc before any write */",
         "prefer": "uint32_t crc = 0u;   /* initialize at the point of declaration */",
         "why": "Reading uninitialized automatic storage is undefined behaviour and "
@@ -282,7 +284,7 @@ PATTERNS: list[dict] = [
         "concern": "pointer type punning and casts",
         "keywords": ["cast pointer", "type pun", "reinterpret", "aliasing", "union",
                      "incompatible type", "bit cast"],
-        "rules": ["MISRA 11.3", "MISRA 19.2", "CERT EXP39-C"],
+        "rules": ["MISRA 11.3", "MISRA 19.2", "MISRA 19.1", "CERT EXP39-C"],
         "avoid": "float f = *(float *)&bits;   /* incompatible-type access: aliasing UB */",
         "prefer": "float f;\n(void)memcpy(&f, &bits, sizeof f);   /* copy the bytes, no aliasing */",
         "why": "Accessing an object through an incompatible pointer type (or a "
@@ -504,6 +506,98 @@ PATTERNS: list[dict] = [
         "why": "Consistent width, spaces-not-tabs, review-sized functions and a "
                "clean strict-warning build keep code reviewable and catch defects "
                "the standards can't.",
+    },
+    {
+        "concern": "sizeof pitfalls (array parameters, side effects)",
+        "keywords": ["sizeof", "array parameter", "array size", "decay", "pointer size",
+                     "side effect", "element count"],
+        "rules": ["MISRA 12.5", "MISRA 13.6"],
+        "avoid": "size_t n_bytes(uint8_t buf[16]) { return sizeof(buf); }  "
+                 "/* pointer size! */\n"
+                 "size_t m = sizeof(i++);   /* i is never incremented */",
+        "prefer": "size_t n_bytes(const uint8_t *buf, size_t len)\n"
+                  "{\n"
+                  "    (void)buf;\n"
+                  "    return len;          /* caller passes the real count */\n"
+                  "}\n"
+                  "i++;\n"
+                  "size_t m = sizeof(i);    /* side effect hoisted out */",
+        "why": "An array parameter decays to a pointer, so sizeof yields the "
+               "pointer width, not the array's — a silent, portable-looking bug. "
+               "And sizeof does not evaluate its operand, so any side effect "
+               "inside it simply never happens. Both are MISRA Mandatory: they "
+               "cannot be deviated, only fixed.",
+    },
+    {
+        "concern": "functions must return a value on every path",
+        "keywords": ["return", "return value", "fall off the end", "missing return",
+                     "non-void", "exit path"],
+        "rules": ["MISRA 17.4"],
+        "avoid": "int32_t clamp(int32_t v)\n"
+                 "{\n"
+                 "    if (v > MAX) { return MAX; }\n"
+                 "    /* falls off the end when v <= MAX: undefined */\n"
+                 "}",
+        "prefer": "int32_t clamp(int32_t v)\n"
+                  "{\n"
+                  "    if (v > MAX) { return MAX; }\n"
+                  "    return v;            /* every path returns a value */\n"
+                  "}",
+        "why": "Reading the result of a function that fell off its end is "
+               "undefined behaviour, and the value you get is whatever happened "
+               "to be in the return register. Mandatory — no deviation is "
+               "available.",
+    },
+    {
+        "concern": "character classification (ctype) argument range",
+        "keywords": ["ctype", "isalpha", "isdigit", "isspace", "toupper", "tolower",
+                     "char", "unsigned char", "EOF"],
+        "rules": ["MISRA 21.13"],
+        "avoid": "char c = line[i];\nif (isdigit(c)) { ... }   "
+                 "/* negative if char is signed */",
+        "prefer": "char c = line[i];\nif (isdigit((unsigned char)c)) { ... }",
+        "why": "<ctype.h> functions are defined only for values representable as "
+               "unsigned char, plus EOF. Plain char is signed on most targets, so "
+               "any byte above 0x7F arrives negative and indexes outside the "
+               "implementation's lookup table. Mandatory.",
+    },
+    {
+        "concern": "pointers returned by the standard library",
+        "keywords": ["getenv", "setlocale", "strerror", "localeconv", "asctime",
+                     "ctime", "returned pointer", "static buffer", "invalidated"],
+        "rules": ["MISRA 21.19", "MISRA 21.20"],
+        "avoid": "char *home = getenv(\"HOME\");\n"
+                 "char *path = getenv(\"PATH\");   /* may invalidate 'home' */\n"
+                 "home[0] = 'x';                 /* writing library storage */",
+        "prefer": "const char *src = getenv(\"HOME\");\n"
+                  "char home[PATH_MAX];\n"
+                  "if (src != NULL) { (void)snprintf(home, sizeof(home), \"%s\", src); }\n"
+                  "/* own copy taken immediately; never written through 'src' */",
+        "why": "These functions hand back a pointer into storage the library "
+               "owns. It is read-only in practice, and a later call in the same "
+               "family may overwrite or free it. Copy what you need at once and "
+               "treat the pointer as const. Both Mandatory.",
+    },
+    {
+        "concern": "file streams and FILE handles",
+        "keywords": ["FILE", "fopen", "fclose", "stream", "fwrite", "fread",
+                     "read-only", "closed stream", "dereference"],
+        "rules": ["MISRA 22.4", "MISRA 22.5", "MISRA 22.6"],
+        "avoid": "FILE *f = fopen(path, \"r\");\n"
+                 "fprintf(f, \"data\");   /* opened read-only */\n"
+                 "fclose(f);\n"
+                 "fread(buf, 1u, n, f);  /* use after close */",
+        "prefer": "FILE *f = fopen(path, \"w\");\n"
+                  "if (f != NULL) {\n"
+                  "    (void)fprintf(f, \"data\");\n"
+                  "    (void)fclose(f);\n"
+                  "    f = NULL;          /* a later use now fails loudly */\n"
+                  "}",
+        "why": "Writing to a read-only stream, dereferencing a FILE (its layout "
+               "is implementation-defined), or touching one after fclose all read "
+               "or write storage the library has reclaimed. All three are "
+               "Mandatory. Note MISRA also bans <stdio.h> outright in production "
+               "firmware (Rule 21.6) — these apply where it is permitted.",
     },
 ]
 

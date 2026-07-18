@@ -6,6 +6,7 @@ from pathlib import Path
 
 from maishac.engine import LoopEngine
 from maishac import report as report_mod
+from maishac.rules import REGISTRY
 
 FIXTURE = Path(__file__).resolve().parent.parent / "examples" / "bad.c"
 
@@ -26,7 +27,8 @@ def test_gep_records_tool_inventory_and_coverage(tmp_path):
     gep = report_mod.guideline_enforcement_plan(eng.mem)
     tools = {t["tool"]: t for t in gep["tools"]}
     assert "native" in tools and tools["native"]["version"].startswith("maishac ")
-    assert gep["enforced"] == 35 and gep["not_checked"] > 0
+    assert gep["enforced"] == len(REGISTRY.all_ids("MISRA-C:2012"))
+    assert gep["not_checked"] > 0
     # every enforced guideline gets a method + at least one checking tool
     assert gep["guidelines"] and all(r["method"] == "Static analysis" for r in gep["guidelines"])
     assert all(r["checked_by"] for r in gep["guidelines"])
