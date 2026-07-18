@@ -24,6 +24,39 @@ _DIAG = re.compile(
     r"(?P<msg>.*?)\s+\[(?P<check>[\w\-.,]+)\]\s*$", re.MULTILINE)
 _CERT_CHECK = re.compile(r"cert-([a-z]{3}\d{2})-c")
 
+# The CERT C *Rules* clang-tidy actually ships a `cert-*` check for. This is a
+# closed list, not "every CERT rule": clang-tidy publishes 22 cert-* checks, and
+# four of those target CERT *Recommendations* (DCL03-C, DCL16-C, INT09-C,
+# MSC24-C), which are non-normative and deliberately absent from the KB. Without
+# this list COVERAGE.md claimed clang-tidy detection for every CERT rule we ship,
+# which is exactly the kind of silent over-claim the project disclaims.
+#
+# On LLVM trunk every cert-* check became an alias of a bugprone-*/misc-*/
+# modernize-* check. No cert-* name was removed, so the names above still resolve
+# and the `_CERT_CHECK` regex above keeps working — but a future LLVM that drops
+# the aliases would need this map rebuilt against the canonical names.
+CLANG_TIDY_CERT_RULES = frozenset({
+    "ARR39-C",   # cert-arr39-c   -> bugprone-sizeof-expression
+    "CON36-C",   # cert-con36-c   -> bugprone-spuriously-wake-up-functions
+    "DCL37-C",   # cert-dcl37-c   -> bugprone-reserved-identifier
+    "ENV33-C",   # cert-env33-c   -> bugprone-command-processor
+    "ERR33-C",   # cert-err33-c   -> bugprone-unused-return-value
+    "ERR34-C",   # cert-err34-c   -> bugprone-unchecked-string-to-number-conversion
+    "EXP42-C",   # cert-exp42-c   -> bugprone-suspicious-memory-comparison
+    "EXP45-C",   # cert-exp45-c   -> bugprone-assignment-in-selection-statement
+                 #                   (absent in LLVM 21.1.0, present on trunk)
+    "FIO38-C",   # cert-fio38-c   -> misc-non-copyable-objects
+    "FLP30-C",   # cert-flp30-c   -> bugprone-float-loop-counter
+    "FLP37-C",   # cert-flp37-c   -> bugprone-suspicious-memory-comparison
+    "MSC30-C",   # cert-msc30-c   -> misc-predictable-rand
+    "MSC32-C",   # cert-msc32-c   -> bugprone-random-generator-seed
+    "MSC33-C",   # cert-msc33-c   -> bugprone-unsafe-functions
+    "POS44-C",   # cert-pos44-c   -> bugprone-bad-signal-to-kill-thread
+    "POS47-C",   # cert-pos47-c   -> concurrency-thread-canceltype-asynchronous
+    "SIG30-C",   # cert-sig30-c   -> bugprone-signal-handler
+    "STR34-C",   # cert-str34-c   -> bugprone-signed-char-misuse
+})
+
 
 class ClangTidyAnalyzer(Analyzer):
     name = "clang-tidy"

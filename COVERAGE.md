@@ -11,11 +11,18 @@ CERT C has hundreds of guidelines. The tables below list exactly the rules
 Maisha carries fix guidance and cross-references for. A gap here is a
 known gap, which is the point: no silent "we cover MISRA" claim.
 
-**Analyzer columns** reflect what the code *maps*, not what an external
-engine guarantees to implement. `native` = the zero-dependency checks that
-run everywhere. `cppcheck` (MISRA addon + CERT map) and `clang-tidy`
-(`cert-*`) extend detection when installed; whether a specific rule fires
-is up to that engine.
+**Analyzer columns** are closed lists of what each engine actually
+implements, not a blanket claim. `native` = the zero-dependency checks
+that run everywhere. `cppcheck` = the MISRA rules its addon really
+implements (it covers MISRA C:2012+AMD1/2 only — *no* AMD3/AMD4 rule is
+ever credited to it) plus our own map from its native error ids onto
+CERT rules. `clang-tidy` = the 18 CERT rules it ships a `cert-*` check
+for — not all of CERT.
+
+A check being present still isn't a guarantee it fires on a given
+construct, so treat the external columns as an upper bound. `**not
+detected**` means no engine we know of covers the rule: the entry is
+carried for cross-referencing, deviation records and SARIF import.
 
 ## MISRA-C:2012 — 35 rules (19 detected with zero dependencies)
 
@@ -29,7 +36,7 @@ is up to that engine.
 | MISRA-C:2012 Rule 16.1 | required | critical | cppcheck | All switch statements shall be well-formed (each clause terminated, a final default). |
 | MISRA-C:2012 Rule 16.4 | required | critical | native, cppcheck | Every switch statement shall have a default label. |
 | MISRA-C:2012 Rule 17.1 | required | critical | cppcheck | Features of <stdarg.h> shall not be used. |
-| MISRA-C:2012 Rule 17.2 | required | critical | native, cppcheck | Functions shall not call themselves directly or indirectly (no recursion). |
+| MISRA-C:2012 Rule 17.2 | required | critical | native (partial), cppcheck | Functions shall not call themselves directly or indirectly (no recursion). |
 | MISRA-C:2012 Rule 17.7 | required | critical | cppcheck | The value returned by a non-void function shall be used or explicitly discarded. |
 | MISRA-C:2012 Rule 18.8 | required | critical | native, cppcheck | Variable-length arrays shall not be used. |
 | MISRA-C:2012 Rule 20.4 | required | critical | cppcheck | A macro shall not share its name with a language keyword. |
@@ -86,36 +93,36 @@ is up to that engine.
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
-| CERT ARR30-C | - | blocker | clang-tidy, cppcheck | Do not form or use out-of-bounds pointers or array subscripts. |
-| CERT ARR32-C | - | critical | clang-tidy, cppcheck | Ensure size arguments for variable-length arrays are valid and bounded. |
-| CERT CON33-C | - | critical | native, clang-tidy | Avoid race conditions from library functions that use static internal state. |
-| CERT DCL30-C | - | blocker | clang-tidy, cppcheck | Do not let object addresses escape their lifetime (e.g., returning pointers to locals). |
+| CERT ARR30-C | - | blocker | cppcheck | Do not form or use out-of-bounds pointers or array subscripts. |
+| CERT ARR32-C | - | critical | cppcheck | Ensure size arguments for variable-length arrays are valid and bounded. |
+| CERT CON33-C | - | critical | native | Avoid race conditions from library functions that use static internal state. |
+| CERT DCL30-C | - | blocker | cppcheck | Do not let object addresses escape their lifetime (e.g., returning pointers to locals). |
 | CERT DCL37-C | - | major | clang-tidy | Do not declare or define reserved identifiers (leading underscore, standard names). |
 | CERT ENV33-C | - | blocker | native, clang-tidy | Do not invoke command processors via system(). |
 | CERT ERR33-C | - | critical | clang-tidy, cppcheck | Detect and handle standard library errors (check return values). |
 | CERT ERR34-C | - | critical | native, clang-tidy | Detect errors when converting strings to numbers (atoi cannot report failure). |
-| CERT EXP33-C | - | blocker | clang-tidy, cppcheck | Do not read uninitialized memory. |
-| CERT EXP34-C | - | blocker | clang-tidy, cppcheck | Do not dereference null pointers. |
-| CERT EXP39-C | - | critical | clang-tidy | Do not access an object through a pointer of an incompatible type. |
+| CERT EXP33-C | - | blocker | cppcheck | Do not read uninitialized memory. |
+| CERT EXP34-C | - | blocker | cppcheck | Do not dereference null pointers. |
+| CERT EXP39-C | - | critical | **not detected** | Do not access an object through a pointer of an incompatible type. |
 | CERT EXP45-C | - | major | clang-tidy | Do not perform assignments inside selection or iteration condition expressions. |
-| CERT FIO30-C | - | blocker | clang-tidy | Never pass externally influenced data as a printf-family format string. |
-| CERT FIO34-C | - | critical | clang-tidy | Distinguish characters read from a file from EOF/WEOF. |
-| CERT FLP32-C | - | critical | clang-tidy, cppcheck | Prevent or detect domain and range errors in floating-point math functions. |
+| CERT FIO30-C | - | blocker | **not detected** | Never pass externally influenced data as a printf-family format string. |
+| CERT FIO34-C | - | critical | **not detected** | Distinguish characters read from a file from EOF/WEOF. |
+| CERT FLP32-C | - | critical | cppcheck | Prevent or detect domain and range errors in floating-point math functions. |
 | CERT FLP37-C | - | major | native, clang-tidy | Do not compare floating-point values with == or != for equality. |
-| CERT INT30-C | - | critical | clang-tidy | Ensure unsigned integer operations do not wrap unintentionally. |
-| CERT INT31-C | - | critical | clang-tidy, cppcheck | Ensure integer conversions do not lose or misinterpret data. |
-| CERT INT32-C | - | critical | clang-tidy, cppcheck | Ensure signed integer operations do not overflow (undefined behavior). |
-| CERT INT33-C | - | critical | clang-tidy, cppcheck | Ensure division and remainder operations cannot divide by zero. |
-| CERT MEM30-C | - | blocker | clang-tidy, cppcheck | Do not access memory after it has been freed. |
-| CERT MEM31-C | - | blocker | clang-tidy, cppcheck | Free dynamically allocated memory exactly once. |
-| CERT MEM34-C | - | blocker | clang-tidy, cppcheck | Only free memory that was dynamically allocated. |
-| CERT MEM35-C | - | critical | clang-tidy | Allocate sufficient memory for an object, guarding size computations against overflow. |
+| CERT INT30-C | - | critical | **not detected** | Ensure unsigned integer operations do not wrap unintentionally. |
+| CERT INT31-C | - | critical | cppcheck | Ensure integer conversions do not lose or misinterpret data. |
+| CERT INT32-C | - | critical | cppcheck | Ensure signed integer operations do not overflow (undefined behavior). |
+| CERT INT33-C | - | critical | cppcheck | Ensure division and remainder operations cannot divide by zero. |
+| CERT MEM30-C | - | blocker | cppcheck | Do not access memory after it has been freed. |
+| CERT MEM31-C | - | blocker | cppcheck | Free dynamically allocated memory exactly once. |
+| CERT MEM34-C | - | blocker | cppcheck | Only free memory that was dynamically allocated. |
+| CERT MEM35-C | - | critical | **not detected** | Allocate sufficient memory for an object, guarding size computations against overflow. |
 | CERT MSC32-C | - | critical | native, clang-tidy | Seed pseudorandom generators properly; do not use rand() where quality matters. |
 | CERT MSC33-C | - | blocker | native, clang-tidy | Do not pass invalid data to asctime()/similar fixed-buffer time functions. |
-| CERT MSC39-C | - | critical | clang-tidy, cppcheck | Do not call va_arg() on a va_list whose value is indeterminate (already consumed by another traversal, or used after va_end). |
-| CERT PRE31-C | - | major | clang-tidy | Avoid side effects in arguments to unsafe (multi-evaluating) macros. |
+| CERT MSC39-C | - | critical | cppcheck | Do not call va_arg() on a va_list whose value is indeterminate (already consumed by another traversal, or used after va_end). |
+| CERT PRE31-C | - | major | **not detected** | Avoid side effects in arguments to unsafe (multi-evaluating) macros. |
 | CERT SIG30-C | - | critical | clang-tidy | Call only async-signal-safe functions inside signal handlers. |
-| CERT STR31-C | - | blocker | native, clang-tidy, cppcheck | Guarantee destination storage is large enough for string data plus the null terminator (gets/strcpy/strcat/sprintf are unbounded). |
-| CERT STR32-C | - | blocker | clang-tidy, cppcheck | Do not pass non-null-terminated character sequences to functions that expect strings. |
+| CERT STR31-C | - | blocker | native, cppcheck | Guarantee destination storage is large enough for string data plus the null terminator (gets/strcpy/strcat/sprintf are unbounded). |
+| CERT STR32-C | - | blocker | cppcheck | Do not pass non-null-terminated character sequences to functions that expect strings. |
 
 _Total: 86 rules across 3 standards._

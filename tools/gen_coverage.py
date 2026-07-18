@@ -10,51 +10,29 @@ Analyzer backing, as the code (not the external tools) maps it:
   * native    — the deterministic, zero-dependency checks in native.py. The set
                 is extracted from that file's own rule queries, so adding a check
                 there updates this table on the next run.
-  * cppcheck  — the MISRA addon emits by rule number (misra-c2012-N.N -> every
-                MISRA *Rule*), plus the CERT ids in cppcheck's CPPCHECK_TO_CERT.
-  * clang-tidy — cert-* checks map onto every CERT rule.
-Whether a given cppcheck/clang-tidy rule actually fires depends on that external
-engine's own coverage; this table reflects what Maisha maps, not a promise
-the engine implements every one.
+  * cppcheck  — the MISRA rules its addon actually implements
+                (CPPCHECK_MISRA_IMPLEMENTED, read off addons/misra.py), plus the
+                CERT ids in cppcheck's CPPCHECK_TO_CERT.
+  * clang-tidy — the CERT rules it ships a cert-* check for
+                (CLANG_TIDY_CERT_RULES) — 18 rules, not "all of CERT".
+Both external columns were blanket claims until Phase 0 of the rule-set
+expansion: every MISRA Rule was credited to cppcheck and every CERT rule to
+clang-tidy. Neither was true, so they are now closed lists derived from what
+those tools publish. Even so, a check being *present* is not a guarantee it
+fires on a given construct — these lists are an upper bound on external
+coverage, not a promise.
 """
 from __future__ import annotations
 
-import re
-from importlib import resources
 from pathlib import Path
 
 from maishac.rules import REGISTRY
-from maishac.analyzers.cppcheck import CPPCHECK_TO_CERT
+from maishac.coverage import native_ids, analyzers_for
 
 ROOT = Path(__file__).resolve().parent.parent
 STANDARDS = ["MISRA-C:2012", "BARR-C:2018", "CERT-C"]
 # MISRA category ordering: mandatory cannot be waived, so it must lead.
 _CAT_ORDER = {"mandatory": 0, "required": 1, "advisory": 2, "": 3}
-
-
-def native_ids() -> set[str]:
-    """Canonical ids the native analyzer can emit, read from its own source."""
-    src = (ROOT / "maishac" / "analyzers" / "native.py").read_text("utf-8")
-    ids = set()
-    for q in re.findall(r'"((?:MISRA|CERT|BARR)[^"]*)"', src):
-        meta = REGISTRY.resolve(q)
-        if meta:
-            ids.add(meta["id"])
-    return ids
-
-
-def analyzers_for(meta: dict, native: set[str]) -> list[str]:
-    rid, std = meta["id"], meta["standard"]
-    out = []
-    if rid in native:
-        out.append("native")
-    if std == "MISRA-C:2012" and rid.startswith("MISRA-C:2012 Rule "):
-        out.append("cppcheck")
-    if std == "CERT-C":
-        out.append("clang-tidy")
-        if any(f"CERT {c}" == rid for c in CPPCHECK_TO_CERT.values()):
-            out.append("cppcheck")
-    return out
 
 
 def rows(standard: str, native: set[str]) -> list[tuple]:
@@ -64,7 +42,7 @@ def rows(standard: str, native: set[str]) -> list[tuple]:
         cat = m.get("category", "")
         out.append((_CAT_ORDER.get(cat, 3), rid,
                     (cat or "-"), m.get("severity", "-"),
-                    ", ".join(analyzers_for(m, native)) or "**not detected**",
+                    ", ".join(analyzers_for(rid, native)) or "**not detected**",
                     m.get("summary", "")))
     return sorted(out, key=lambda r: (r[0], r[1]))
 
@@ -84,11 +62,18 @@ def render() -> str:
          "Maisha carries fix guidance and cross-references for. A gap here is a",
          "known gap, which is the point: no silent \"we cover MISRA\" claim.",
          "",
-         "**Analyzer columns** reflect what the code *maps*, not what an external",
-         "engine guarantees to implement. `native` = the zero-dependency checks that",
-         "run everywhere. `cppcheck` (MISRA addon + CERT map) and `clang-tidy`",
-         "(`cert-*`) extend detection when installed; whether a specific rule fires",
-         "is up to that engine.",
+         "**Analyzer columns** are closed lists of what each engine actually",
+         "implements, not a blanket claim. `native` = the zero-dependency checks",
+         "that run everywhere. `cppcheck` = the MISRA rules its addon really",
+         "implements (it covers MISRA C:2012+AMD1/2 only — *no* AMD3/AMD4 rule is",
+         "ever credited to it) plus our own map from its native error ids onto",
+         "CERT rules. `clang-tidy` = the 18 CERT rules it ships a `cert-*` check",
+         "for — not all of CERT.",
+         "",
+         "A check being present still isn't a guarantee it fires on a given",
+         "construct, so treat the external columns as an upper bound. `**not",
+         "detected**` means no engine we know of covers the rule: the entry is",
+         "carried for cross-referencing, deviation records and SARIF import.",
          ""]
     total = 0
     for std in STANDARDS:
