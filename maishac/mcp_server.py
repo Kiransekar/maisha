@@ -5,7 +5,9 @@ so ANY agentic IDE that speaks MCP — Claude Code, Cursor, Windsurf, VS Code
 Copilot agent mode, Zed, Continue, JetBrains AI — can drive the compliance
 loop with zero IDE-specific code.
 
-Run:  maishac serve --project /path/to/project
+Run:  maishac --project /path/to/project serve
+      (--project is a global flag, so it precedes the subcommand;
+       the MAISHAC_PROJECT environment variable works too)
 """
 
 from __future__ import annotations

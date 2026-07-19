@@ -6,6 +6,25 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **INSTALL.md** — setup from scratch through to a connected editor or agent:
+  install, the external analyzers (with the cppcheck-without-its-MISRA-addon
+  trap called out), verification via `maishac doctor`, a first scan, ready-made
+  MCP configs for Claude Code / Cursor / VS Code / Windsurf / Zed / Claude
+  Desktop, a CI workflow, and layering a qualified engine via SARIF import.
+- **MISRA C:2012 section 20 (preprocessor) — 12 rules added, KB 102 -> 114.**
+  Section 20 is the densest block of Decidable / single-translation-unit rules
+  in the standard, which is the shape a lexical analyzer can implement honestly.
+  Six are detected natively: 20.2 (undefined characters in a header name), 20.3
+  (malformed #include), 20.10 (# and ## operators), 20.11 (# operand followed by
+  ##), 20.13 (invalid directive) and 20.14 (#else/#endif without a matching #if
+  in the file). Four new authoring patterns cover all 14 section 20 rules.
+
+### Fixed
+- **`maishac serve --project <path>` never worked** and was documented in
+  `mcp_server.py`. `--project` is a global flag, so it must precede the
+  subcommand: `maishac --project <path> serve`.
+
+### Added
 - **A narrowed toolchain is never silent again.** The native analyzer is
   zero-dependency and always runs, so a scan on a bare install *succeeded* while
   quietly checking a fraction of the rules — and a clean result read exactly
