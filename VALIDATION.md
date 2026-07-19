@@ -283,10 +283,11 @@ These restate and reconfirm the project's own honest framing:
 - **Not a qualified/certified tool** (see §0). The engines carry no qualification
   kit. Certification requires a qualified engine (Astrée/Polyspace/Helix QAC/…)
   and an accredited assessor; Maisha layers on top via SARIF import.
-- **Coverage is ~114 curated rules** across three standards (63 MISRA C:2012,
-  20 BARR-C:2018, 31 CERT C) — a fraction of the full standards; detection is
-  bounded by the engines, not the curated set. 89 are enforced (an analyzer
-  detects them); 25 are reference-only entries.
+- **Coverage is ~214 curated rules** across three standards (72 MISRA C:2012,
+  20 BARR-C:2018, 122 CERT C) — a fraction of the full standards; detection is
+  bounded by the engines, not the curated set. 107 are enforced (an analyzer
+  detects them); 107 are reference-only entries carried for cross-referencing,
+  deviation records and SARIF import mapping.
 - **MISRA C:2012 scope is the base standard plus Amendments 1 and 2.** That
   matches what cppcheck's free MISRA addon implements, so every enforced MISRA
   rule keeps an external cross-check. Amendment 3/4 guidelines (including the
