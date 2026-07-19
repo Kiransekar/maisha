@@ -81,14 +81,23 @@ class LoopEngine:
         scanned = [str(f.resolve().relative_to(self.root)) if str(f).startswith(str(self.root))
                    else str(f) for f in collect_c_files(paths, self.root)]
         diff = self.mem.sync_scan(findings, scanned, gate=gate, producers=set(used))
-        return {
+        # Every scan states what it could NOT check. Without this a native-only
+        # run returns a clean result indistinguishable from a full-toolchain
+        # clean result, which silently overstates compliance.
+        from ..coverage import toolchain_status, toolchain_warning
+        tc = toolchain_status(analyzers)
+        out = {
             "analyzers_used": used,
             "files_scanned": len(scanned),
             "total_findings": len(findings),
             "diff": {k: len(v) for k, v in diff.items()},
             "open": len(self.mem.open_findings(limit=100000)),
             "pending_verification": self.mem.count_pending(),
+            "toolchain": tc,
         }
+        if tc["degraded"]:
+            out["coverage_warning"] = toolchain_warning(tc)
+        return out
 
     def import_sarif(self, path: str | Path) -> dict:
         """Ingest findings from an external SARIF file (e.g. a qualified engine
@@ -232,7 +241,7 @@ class LoopEngine:
             "iteration": 0, "event": "baseline",
             "open": baseline["open"], "ts": time.time(),
         }])
-        return {
+        out = {
             "session_id": sid,
             "state": "active",
             "baseline": baseline,
@@ -240,6 +249,16 @@ class LoopEngine:
                           "Before editing, call record_attempt with your intended strategy. "
                           "After editing, call verify. Repeat until the session converges."),
         }
+        # A session is the start of a whole compliance campaign, so a narrowed
+        # toolchain is hoisted out of the nested baseline to the top level —
+        # converging this session must not be mistaken for "the code complies".
+        if baseline.get("coverage_warning"):
+            out["coverage_warning"] = baseline["coverage_warning"]
+            out["guidance"] += (
+                " NOTE: this session cannot check every rule Maisha knows — see "
+                "coverage_warning. Report that limitation to the user rather than "
+                "presenting convergence as full compliance.")
+        return out
 
     def next_batch(self, session_id: str) -> dict:
         sess = self._require(session_id)

@@ -6,6 +6,28 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **A narrowed toolchain is never silent again.** The native analyzer is
+  zero-dependency and always runs, so a scan on a bare install *succeeded* while
+  quietly checking a fraction of the rules — and a clean result read exactly
+  like a clean result from a full toolchain. That is the most dangerous failure
+  mode a compliance tool can have, and it made Maisha look weaker than it is
+  while claiming more than it checked. Every path that draws a conclusion now
+  discloses the gap:
+  - `scan` and `session begin` return a `toolchain` block and, when analyzers
+    are missing, a `coverage_warning` naming each absent tool, how many rules it
+    would have checked, and examples.
+  - The CLI prints that warning to **stderr**, so stdout stays valid JSON for
+    `jq` and CI while the human still sees it.
+  - Explicitly passing `--analyzers native` is reported as degraded too — it is
+    a legitimate choice, but it must not be a quiet way to look compliant.
+  - The MCP `compliance_scan` docstring instructs the agent to relay the warning
+    and not to describe a converged session as "compliant", and a new
+    `compliance_doctor` tool exposes the full diagnosis.
+  - The **Guideline Enforcement Plan now lists analyzers that are absent**, not
+    just those installed. MISRA Compliance:2020 requires the plan to record how
+    each guideline is enforced *including* where nothing covers it; an inventory
+    of only what happens to be installed reads as though the rest of the
+    standard were checked and passed.
 - **`maishac doctor`** — diagnoses the install, analyzer toolchain, knowledge
   base and project memory. The question it answers is not "is Maisha
   installed" but *"what will this machine actually detect, and what am I
