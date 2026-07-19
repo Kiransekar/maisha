@@ -5,6 +5,20 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- **BARR-C:2018 summaries rewritten as independent restatements.** BARR-C is
+  free to download but all rights are reserved, and its document licence
+  restricts works *derived from the Document* to private use. Copyright
+  protects expression rather than the underlying engineering ideas or the rule
+  numbering, so the summaries must be our own statement of what each rule is
+  for -- not a restatement of Barr's sentence. The previous wording used
+  normative standards voice ("X shall Y"), which mirrors the structure of a
+  rule as written and is the phrasing most likely to read as derived. All 20
+  are now descriptive and lead with the engineering reason.
+  Attribution added, which the standard explicitly asks tools that detect
+  violations to provide. The README licence section now states the position
+  for all three standards, including that none of them endorse Maisha.
+
 ### Added
 - **SEI CERT C brought to the full normative rule set, 31 -> 122** (knowledge
   base 123 -> 214). CERT identifiers numbered 00-29 are Recommendations and are
