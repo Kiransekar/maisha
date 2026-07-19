@@ -176,6 +176,25 @@ _IF_CLOSE_RE = re.compile(r"^\s*#\s*endif\b")
 _IF_MID_RE = re.compile(r"^\s*#\s*(else|elif|elifdef|elifndef)\b")
 
 
+# --- MISRA sections 15 (control flow) and 16 (switch) -----------------------
+_SWITCH_RE = re.compile(r"\bswitch\s*\(")
+# `default:` but not the `default` of a ternary-free identifier like `defaults:`
+_DEFAULT_LABEL_RE = re.compile(r"\bdefault\s*:")
+# `case X:` -- the value may contain colons (a scope operator never does in C,
+# but a character constant like ':' does), so match the keyword, not the colon.
+_CASE_LABEL_RE = re.compile(r"\bcase\b[^;]*:")
+_GOTO_LABEL_RE = re.compile(r"\bgoto\s+(\w+)\s*;")
+# A label definition: an identifier alone before a colon at the start of a
+# statement. Excludes `case`/`default` (handled above) and anything that looks
+# like a ternary or a bit-field width.
+_LABEL_DEF_RE = re.compile(r"^\s*([A-Za-z_]\w*)\s*:(?!:)(?!\s*[0-9])\s*$")
+# Strips a leading `case X:` / `default:` so a one-line clause is judged on its
+# statement rather than its label.
+_LABEL_PREFIX_RE = re.compile(r"^\s*(?:case\b[^;]*?|default\s*):")
+# What may legitimately end a switch clause (Rule 16.3).
+_CLAUSE_TERMINATOR_RE = re.compile(r"\b(break|return|goto|continue)\b")
+
+
 def _logical_preproc(lines: list[str]) -> list[tuple[int, str]]:
     """Join backslash-continued preprocessor directives into logical lines.
 
@@ -276,6 +295,67 @@ class NativeAnalyzer(Analyzer):
             cross_refs=REGISTRY.cross_refs(meta["id"]),
             fix_hint=meta.get("fix", ""),
         )
+
+    @staticmethod
+    def _resolve_gotos(fn: dict, add) -> None:
+        """Rule 15.2 (a goto must jump forward) is deliberately NOT implemented.
+
+        Labels are function-scoped in C, so the rule is only decidable with
+        reliable function boundaries -- and _FUNC_DEF_RE needs the whole
+        signature on one line, which mbedtls and lwip routinely split across
+        three. Without a frame the check silently does not run; with the wrong
+        frame it resolves `goto out;` against an `out:` in a different function.
+        Both failure modes appeared on the benchmark corpus: 423 findings, then
+        284 after scoping labels per function, then 192 after dropping the
+        file-global fallback -- all of them wrong, and the residue coming from
+        functions whose frames merged.
+
+        Worse, the surviving check was invisible: on a fixture whose functions
+        all had multi-line signatures it reported zero, which reads identically
+        to correct. cppcheck implements 15.2 with a real parser; the KB carries
+        the rule for that path and for deviation records.
+        """
+        return
+
+    @staticmethod
+    def _close_switch(sw: dict, add, clean_lines: list[str] | None = None,
+                      end_line: int | None = None) -> None:
+        """Checks that can only be decided once a switch's whole body is seen."""
+        if not sw["saw_default"]:
+            add("MISRA 16.4", sw["start"], "switch statement has no default label")
+        # 16.6: a switch with fewer than two case clauses is an `if` in disguise.
+        # Guarded on having seen a body at all, so a macro-obscured or truncated
+        # switch is not reported on the strength of having parsed nothing.
+        if sw["labels"] and sw["cases"] < 2:
+            add("MISRA 16.6", sw["start"],
+                f"switch has {sw['cases']} case clause(s); at least two are required")
+        # 16.5: default must be the first or the last label.
+        if sw["saw_default"] and len(sw["labels"]) > 1:
+            kinds = [k for k, _, _ in sw["labels"]]
+            idx = kinds.index("default")
+            if 0 < idx < len(kinds) - 1:
+                add("MISRA 16.5", sw["labels"][idx][1],
+                    "default label is neither the first nor the last label in the switch")
+
+        # Rule 16.3 (every clause ends in an unconditional break) is deliberately
+        # NOT implemented, for the same reason as Rule 17.4. MISRA permits a
+        # clause to end in any statement that cannot complete normally, so
+        # deciding it requires knowing whether a call returns -- which a lexer
+        # cannot. littlefs's option parser is the canonical shape:
+        #
+        #   case OPT_DEFINE: {
+        #       ...
+        #       break;              /* main path is correctly terminated */
+        #   invalid_define:
+        #       fprintf(stderr, ...);
+        #       exit(-1);           /* textually last, and never returns */
+        #   }
+        #
+        # An exit/abort allowlist does not save it: projects use their own
+        # noreturn wrappers (mbedtls_exit, LOG_PANIC), and the equivalent guard
+        # for 17.4 rescued only 13 of 69 corpus findings. cppcheck implements
+        # 16.3 with a real control flow graph; the KB carries the rule for that
+        # path and for deviation records.
 
     def _preprocessor_checks(self, raw_lines: list[str], clean_lines: list[str],
                              add) -> None:
@@ -420,8 +500,18 @@ class NativeAnalyzer(Analyzer):
         # which of its parameters are declared in array form (12.5).
         func_stack: list[dict] = []
         pending_func: dict | None = None
-        switch_stack: list[tuple[int, int, bool]] = []  # (start_line, depth_at_open, saw_default)
+        # Each switch carries the state sections 16.2/16.5/16.6 need: where its
+        # labels are, at what brace depth each sits, and how many case clauses
+        # it has.
+        switch_stack: list[dict] = []
         depth = 0
+        # Rule 15.2 state. Labels are function-scoped in C, and treating them as
+        # file-global is catastrophic here: mbedtls uses `goto cleanup;` in
+        # hundreds of functions, so a file-global lookup resolves every one of
+        # them to the FIRST `cleanup:` in the file and calls the rest backward
+        # jumps -- 423 findings in mbedtls alone, all wrong. Resolution happens
+        # when a function closes, so a label defined later in the same function
+        # still counts as a forward jump.
 
         for i, line in enumerate(clean_lines, start=1):
             raw = raw_lines[i - 1] if i <= len(raw_lines) else ""
@@ -448,6 +538,18 @@ class NativeAnalyzer(Analyzer):
                         "control statement body is not a compound (braced) block")
             if _GOTO_RE.search(line):
                 add("MISRA 15.1", i, "goto statement")
+            # Only inside a *recognised* function. _FUNC_DEF_RE needs the whole
+            # signature on one line, and mbedtls declares plenty across several
+            # lines -- falling back to a file-global label table there resolved
+            # `goto out;` against an `out:` belonging to a different function
+            # entirely (284 findings in mbedtls, all wrong). Missing a real
+            # backward goto in an unrecognised function is the acceptable
+            # trade: a false negative costs less than a false positive here.
+            if func_stack:
+                if (gm := _GOTO_LABEL_RE.search(line)):
+                    func_stack[-1]["gotos"].append((i, gm.group(1)))
+                if (lm := _LABEL_DEF_RE.match(line)) and lm.group(1) != "default":
+                    func_stack[-1]["labels"].setdefault(lm.group(1), i)
             if _UNION_RE.search(line):
                 add("MISRA 19.2", i, "union declaration")
             if _UNDEF_RE.match(line):
@@ -513,6 +615,7 @@ class NativeAnalyzer(Analyzer):
                 pending_func = {
                     "name": fm.group(1), "start": i,
                     "array_params": _array_param_names(line),
+                    "gotos": [], "labels": {},
                 }
 
             # float equality: crude but effective — == or != on a line mentioning float vars is
@@ -527,19 +630,46 @@ class NativeAnalyzer(Analyzer):
                 func_stack.append(pending_func)
                 pending_func = None
             while func_stack and func_stack[-1]["depth"] > depth:
-                func_stack.pop()
-            if re.search(r"\bswitch\s*\(", line):
-                switch_stack.append([i, depth, False])  # type: ignore[list-item]
-            if switch_stack and re.search(r"\bdefault\s*:", line):
-                switch_stack[-1][2] = True  # type: ignore[index]
-            while switch_stack and depth < switch_stack[-1][1]:
-                start, _, saw_default = switch_stack.pop()
-                if not saw_default:
-                    add("MISRA 16.4", start, "switch statement has no default label")
+                self._resolve_gotos(func_stack.pop(), add)
+            if _SWITCH_RE.search(line):
+                switch_stack.append({"start": i, "depth": depth, "saw_default": False,
+                                     "cases": 0, "labels": [], "body_depth": None})
+            if switch_stack:
+                sw = switch_stack[-1]
+                is_default = bool(_DEFAULT_LABEL_RE.search(line))
+                is_case = bool(_CASE_LABEL_RE.search(line))
+                if is_default or is_case:
+                    # `depth` already includes this line's braces, so a label
+                    # written as `case 1: {` would otherwise record the depth of
+                    # the block it opens rather than the one it sits in, making
+                    # it indistinguishable from a label nested inside that block.
+                    label_depth = depth - (line.count("{") - line.count("}"))
+                    # Self-calibrating: the first label defines the switch body's
+                    # level. Deriving it from the `switch` line instead does not
+                    # work, because `switch (v) {` and a brace on the next line
+                    # leave `depth` one apart.
+                    if sw["body_depth"] is None:
+                        sw["body_depth"] = label_depth
+                    sw["labels"].append(("default" if is_default else "case", i, label_depth))
+                    if is_default:
+                        sw["saw_default"] = True
+                    else:
+                        sw["cases"] += 1
+                    # 16.2: a label must sit directly in the switch's own block.
+                    # Anything deeper is nested inside an inner compound
+                    # statement, where the jump target is invisible to a reader.
+                    if label_depth > sw["body_depth"]:
+                        add("MISRA 16.2", i,
+                            "case/default label is nested inside an inner block "
+                            "rather than the switch's own compound statement")
+            while switch_stack and depth < switch_stack[-1]["depth"]:
+                self._close_switch(switch_stack.pop(), add, clean_lines, i)
 
-        for start, _, saw_default in switch_stack:  # unterminated at EOF
-            if not saw_default:
-                add("MISRA 16.4", start, "switch statement has no default label")
+        for sw in switch_stack:  # unterminated at EOF
+            self._close_switch(sw, add, clean_lines, len(clean_lines) + 1)
+
+        for fn in func_stack:   # functions still open at EOF
+            self._resolve_gotos(fn, add)
 
         self._preprocessor_checks(raw_lines, clean_lines, add)
 

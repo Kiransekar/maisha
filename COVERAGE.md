@@ -24,7 +24,7 @@ construct, so treat the external columns as an upper bound. `**not
 detected**` means no engine we know of covers the rule: the entry is
 carried for cross-referencing, deviation records and SARIF import.
 
-## MISRA-C:2012 — 63 rules (28 detected with zero dependencies)
+## MISRA-C:2012 — 72 rules (31 detected with zero dependencies)
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
@@ -48,9 +48,17 @@ carried for cross-referencing, deviation records and SARIF import.
 | MISRA-C:2012 Rule 10.1 | required | critical | cppcheck | Operands shall have an appropriate essential type for the operator. |
 | MISRA-C:2012 Rule 11.3 | required | critical | cppcheck | A pointer to one object type shall not be cast to a pointer to a different object type. |
 | MISRA-C:2012 Rule 14.4 | required | critical | cppcheck | Controlling expressions of if/while shall have essentially Boolean type. |
+| MISRA-C:2012 Rule 15.2 | required | critical | cppcheck | A goto must jump forward, never to a label earlier in the function. |
+| MISRA-C:2012 Rule 15.3 | required | critical | cppcheck | A goto's target label must be declared in the same block as the goto, or in a block enclosing it. |
 | MISRA-C:2012 Rule 15.6 | required | critical | native, cppcheck | Bodies of if/else/loop statements shall be compound (brace-enclosed) blocks. |
+| MISRA-C:2012 Rule 15.7 | required | critical | cppcheck | An if / else-if chain must be terminated with a final else clause. |
 | MISRA-C:2012 Rule 16.1 | required | critical | cppcheck | All switch statements shall be well-formed (each clause terminated, a final default). |
+| MISRA-C:2012 Rule 16.2 | required | critical | native, cppcheck | A case or default label must appear directly in the switch's own compound block, not nested inside an inner block. |
+| MISRA-C:2012 Rule 16.3 | required | critical | cppcheck | Every switch clause must be terminated with an unconditional break (or return / goto / continue). |
 | MISRA-C:2012 Rule 16.4 | required | critical | native, cppcheck, compiler | Every switch statement shall have a default label. |
+| MISRA-C:2012 Rule 16.5 | required | critical | native, cppcheck | The default label must be either the first or the last label in the switch. |
+| MISRA-C:2012 Rule 16.6 | required | critical | native, cppcheck | Every switch statement must have at least two case clauses. |
+| MISRA-C:2012 Rule 16.7 | required | critical | cppcheck | The controlling expression of a switch must not be essentially boolean. |
 | MISRA-C:2012 Rule 17.1 | required | critical | cppcheck | Features of <stdarg.h> shall not be used. |
 | MISRA-C:2012 Rule 17.2 | required | critical | native (partial), cppcheck | Functions shall not call themselves directly or indirectly (no recursion). |
 | MISRA-C:2012 Rule 17.7 | required | critical | cppcheck, compiler | The value returned by a non-void function shall be used or explicitly discarded. |
@@ -83,6 +91,7 @@ carried for cross-referencing, deviation records and SARIF import.
 | MISRA-C:2012 Rule 12.1 | advisory | minor | cppcheck | Make the precedence of operators within an expression explicit with parentheses. |
 | MISRA-C:2012 Rule 13.4 | advisory | minor | native, cppcheck | The result of an assignment operator should not be used as a value. |
 | MISRA-C:2012 Rule 15.1 | advisory | minor | native, cppcheck | The goto statement should not be used. |
+| MISRA-C:2012 Rule 15.4 | advisory | minor | cppcheck | A loop should have at most one construct that terminates it early (break or goto). |
 | MISRA-C:2012 Rule 15.5 | advisory | minor | cppcheck | A function should have a single point of exit at the end. |
 | MISRA-C:2012 Rule 19.2 | advisory | minor | native, cppcheck | The union keyword should not be used. |
 | MISRA-C:2012 Rule 20.1 | advisory | minor | cppcheck | #include directives should appear before any other preprocessor directive or code in a file. |
@@ -153,4 +162,4 @@ carried for cross-referencing, deviation records and SARIF import.
 | CERT STR31-C | - | blocker | native, cppcheck | Guarantee destination storage is large enough for string data plus the null terminator (gets/strcpy/strcat/sprintf are unbounded). |
 | CERT STR32-C | - | blocker | cppcheck | Do not pass non-null-terminated character sequences to functions that expect strings. |
 
-_Total: 114 rules across 3 standards._
+_Total: 123 rules across 3 standards._

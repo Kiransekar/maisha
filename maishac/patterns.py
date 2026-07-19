@@ -120,7 +120,8 @@ PATTERNS: list[dict] = [
         "concern": "well-formed switch statement",
         "keywords": ["switch", "case", "fallthrough", "fall through",
                      "break", "well-formed switch", "default"],
-        "rules": ["MISRA 16.1", "MISRA 16.4"],
+        "rules": ["MISRA 16.1", "MISRA 16.2", "MISRA 16.3", "MISRA 16.4",
+                  "MISRA 16.5", "MISRA 16.6", "MISRA 16.7"],
         "avoid": "switch (state) {\n"
                  "  case A: do_a();          /* unintended fall-through into B */\n"
                  "  case B: do_b(); break;\n"
@@ -249,7 +250,8 @@ PATTERNS: list[dict] = [
         "concern": "goto and single exit",
         "keywords": ["goto", "label", "jump", "break", "continue", "single exit",
                      "multiple return", "early return"],
-        "rules": ["MISRA 15.1", "MISRA 15.5", "BARR 1.7a"],
+        "rules": ["MISRA 15.1", "MISRA 15.2", "MISRA 15.3", "MISRA 15.4",
+                  "MISRA 15.5", "BARR 1.7a"],
         "avoid": "if (err) goto cleanup;   /* ... */  cleanup: release();",
         "prefer": "/* structure with a status variable and a single return */\n"
                   "status_t st = OK;\nif (err) { st = FAIL; }\nif (st == OK) { work(); }\n"
@@ -506,6 +508,30 @@ PATTERNS: list[dict] = [
         "why": "Consistent width, spaces-not-tabs, review-sized functions and a "
                "clean strict-warning build keep code reviewable and catch defects "
                "the standards can't.",
+    },
+    {
+        "concern": "if / else-if chains",
+        "keywords": ["if", "else", "else if", "chain", "final else", "unhandled",
+                     "branch", "condition"],
+        "rules": ["MISRA 15.7"],
+        "avoid": "if (mode == MODE_A) {\n"
+                 "    start();\n"
+                 "} else if (mode == MODE_B) {\n"
+                 "    stop();\n"
+                 "}   /* what if mode is neither? silently nothing happens */",
+        "prefer": "if (mode == MODE_A) {\n"
+                  "    start();\n"
+                  "} else if (mode == MODE_B) {\n"
+                  "    stop();\n"
+                  "} else {\n"
+                  "    /* unreachable by design: mode is validated on entry */\n"
+                  "    fault_handler(FAULT_BAD_MODE);\n"
+                  "}",
+        "why": "A chain without a final else silently does nothing for every value "
+               "you did not think about, and that is indistinguishable from a case "
+               "you handled deliberately. The else costs one line and records that "
+               "the unhandled path was considered -- even if it only holds a "
+               "comment.",
     },
     {
         "concern": "include directives and header names",
