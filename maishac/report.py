@@ -396,6 +396,53 @@ _MISRA_STD = "MISRA-C:2012"
 # 1/2/3 security rules). Used only to state honest coverage, never to score.
 _MISRA_UNIVERSE = 175
 
+
+def _coverage_breakdown() -> dict:
+    """Two denominators, because one of them always misleads.
+
+    "Coverage" collapses two different questions that move independently, and
+    reporting a single percentage lets a reader answer the one they were not
+    asking:
+
+      * detectable / carried   -- of the guidelines Maisha catalogues, how many
+                                  can any analyzer actually find?
+      * carried / universe     -- how much of MISRA is catalogued at all?
+
+    Growing the knowledge base with reference-only entries raises the second
+    ratio and *lowers* the first, which looks like a regression if only one
+    number is published. Keeping them apart is what makes a bulk import of the
+    remaining standard readable as a denominator change rather than a loss.
+
+    Reference-only guidelines are not failures and not passes: nothing examined
+    them. They are carried so they can be cross-referenced, deviated against,
+    listed in a Guideline Enforcement Plan, and matched when an external
+    engine's SARIF is imported.
+    """
+    from .coverage import analyzers_for, enforced_ids, native_ids, toolchain_status
+    carried = set(REGISTRY.all_ids(_MISRA_STD))
+    # `enforced_ids` means "some analyzer Maisha ships maps a check onto this",
+    # which is not the same as "a tool present on this machine will check it".
+    # A compliance document must report the second, so the installed toolchain
+    # is intersected in as `detectable_here` -- the number that actually
+    # governs what a scan on this machine examined.
+    detectable = carried & enforced_ids()
+    usable = set(toolchain_status()["installed"])
+    native = native_ids()
+    here = {rid for rid in detectable
+            if any(m.split(" ")[0] in usable for m in analyzers_for(rid, native))}
+    return {
+        "detectable": len(detectable),
+        "detectable_here": len(here),
+        "unavailable_here": len(detectable) - len(here),
+        "carried": len(carried),
+        "reference_only": len(carried) - len(detectable),
+        "not_carried": max(0, _MISRA_UNIVERSE - len(carried)),
+        "universe": _MISRA_UNIVERSE,
+        "pct_carried_detectable": round(100 * len(detectable) / len(carried), 1)
+        if carried else 0.0,
+        "pct_standard_carried": round(100 * len(carried) / _MISRA_UNIVERSE, 1),
+    }
+
 _STATUS_KEY = {"Compliant": "compliant", "Deviations": "deviations",
                "Violations": "violations", "Pending verification": "pending",
                "Disapplied": "disapplied"}
@@ -460,12 +507,20 @@ def misra_compliance_summary(mem: MemoryStore) -> dict:
     else:
         verdict = "COMPLIANT"
 
+    coverage = _coverage_breakdown()
     return {
         "standard": _MISRA_STD,
         "verdict": verdict,
-        "enforced": len(enforced),
-        "not_checked": max(0, _MISRA_UNIVERSE - len(enforced)),
+        # `enforced` historically meant "carried in the knowledge base", which
+        # conflated cataloguing a guideline with being able to check it. Both
+        # numbers are now published separately under `coverage`; these keys are
+        # kept so existing consumers do not break, with `enforced` corrected to
+        # mean what its name says.
+        "enforced": coverage["detectable"],
+        "carried": coverage["carried"],
+        "not_checked": coverage["reference_only"] + coverage["not_carried"],
         "universe": _MISRA_UNIVERSE,
+        "coverage": coverage,
         "counts": counts,
         "guidelines": guidelines,
         "deviation_permits": mem.deviations(),
@@ -476,6 +531,7 @@ def misra_compliance_summary(mem: MemoryStore) -> dict:
 
 def misra_compliance_markdown(mem: MemoryStore, project_name: str = "") -> str:
     s = misra_compliance_summary(mem)
+    cv = s["coverage"]
     c = s["counts"]
     L = [
         f"# MISRA C:2012 Guideline Compliance Summary{(' — ' + project_name) if project_name else ''}",
@@ -485,9 +541,21 @@ def misra_compliance_markdown(mem: MemoryStore, project_name: str = "") -> str:
         "",
         f"## Verdict: **{s['verdict']}**",
         "",
-        f"- Guidelines enforced by this configuration: **{s['enforced']}** of "
-        f"~{s['universe']} (Amendments included). **{s['not_checked']} not checked** "
-        "by Maisha — see coverage caveat below.",
+        f"- **Checked on this machine: {cv['detectable_here']} of the "
+        f"{cv['carried']} guidelines catalogued.** "
+        + (f"{cv['unavailable_here']} more could be checked, but the analyzer "
+           "that covers them is not installed here. " if cv["unavailable_here"] else "")
+        + (f"The remaining {cv['reference_only']} "
+           f"{'is' if cv['reference_only'] == 1 else 'are'} carried for "
+           "cross-referencing and deviation records; no analyzer Maisha ships "
+           "checks them at all." if cv["reference_only"] else ""),
+        f"- **Catalogued: {cv['carried']} of ~{cv['universe']}** MISRA C:2012 "
+        f"guidelines ({cv['pct_standard_carried']}%, Amendments included). The "
+        f"remaining {cv['not_carried']} are outside Maisha's knowledge base "
+        "entirely.",
+        "- Neither figure is a compliance score. A guideline that was never "
+        "checked is not compliant and not in violation — it is unexamined, and "
+        "must be assigned an enforcement method of its own.",
         f"- Compliant: **{c['compliant']}** · With deviations: **{c['deviations']}** · "
         f"Pending verification: **{c['pending']}** · In violation: **{c['violations']}** · "
         f"Disapplied (GRP): **{c['disapplied']}**",
@@ -600,11 +668,12 @@ def guideline_enforcement_plan(mem: MemoryStore) -> dict:
         })
     return {"standard": _MISRA_STD, "tools": tools, "guidelines": rows,
             "enforced": summary["enforced"], "not_checked": summary["not_checked"],
-            "universe": summary["universe"]}
+            "universe": summary["universe"], "coverage": summary["coverage"]}
 
 
 def guideline_enforcement_markdown(mem: MemoryStore, project_name: str = "") -> str:
     gep = guideline_enforcement_plan(mem)
+    gc = gep["coverage"]
     L = [
         f"# MISRA C:2012 Guideline Enforcement Plan (GEP){(' — ' + project_name) if project_name else ''}",
         "",
@@ -635,11 +704,19 @@ def guideline_enforcement_markdown(mem: MemoryStore, project_name: str = "") -> 
                 "presenting this plan as evidence."]
 
     L += ["", "## Per-guideline enforcement", "",
-          f"This plan covers the **{gep['enforced']}** guidelines Maisha enforces. "
-          f"The remaining **{gep['not_checked']}** of ~{gep['universe']} MISRA C:2012 "
-          "guidelines are **not covered by this plan** and must be assigned an "
-          "enforcement method (compiler, an additional/qualified tool, or manual "
-          "review) — layer a qualified engine's SARIF via `maishac import` to extend "
+          f"This plan covers the **{gc['detectable_here']}** guidelines the "
+          f"tools installed on this machine actually check, out of "
+          f"**{gc['detectable']}** Maisha can check with a full toolchain, "
+          f"**{gc['carried']}** catalogued, and ~{gc['universe']} in the standard.",
+          "",
+          f"Three separate gaps must each be closed by other means. "
+          f"**{gc['unavailable_here']}** are covered by an analyzer that is not "
+          f"installed here, **{gc['reference_only']}** catalogued guideline(s) "
+          f"have no analyzer behind them at all, and **{gc['not_carried']}** are "
+          "not in the knowledge base. Each requires an enforcement method of "
+          "its own — a "
+          "compiler, an additional or qualified tool, or documented manual review. "
+          "Layer a qualified engine's SARIF via `maishac import` to extend "
           "coverage, then regenerate.",
           "",
           "| Guideline | Category | Method | Checked by | Detection evidence |",

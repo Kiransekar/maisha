@@ -27,7 +27,9 @@ def test_gep_records_tool_inventory_and_coverage(tmp_path):
     gep = report_mod.guideline_enforcement_plan(eng.mem)
     tools = {t["tool"]: t for t in gep["tools"]}
     assert "native" in tools and tools["native"]["version"].startswith("maishac ")
-    assert gep["enforced"] == len(REGISTRY.all_ids("MISRA-C:2012"))
+    cv = gep["coverage"]
+    assert cv["carried"] == len(REGISTRY.all_ids("MISRA-C:2012"))
+    assert cv["detectable"] <= cv["carried"]
     assert gep["not_checked"] > 0
     # every enforced guideline gets a method + at least one checking tool
     assert gep["guidelines"] and all(r["method"] == "Static analysis" for r in gep["guidelines"])
@@ -37,7 +39,13 @@ def test_gep_records_tool_inventory_and_coverage(tmp_path):
     assert observed, "no guideline showed observed detection evidence"
 
     md = report_mod.guideline_enforcement_markdown(eng.mem, "demo")
-    assert "Guideline Enforcement Plan" in md and "native" in md and "not covered by this plan" in md
+    assert "Guideline Enforcement Plan" in md and "native" in md
+    # The plan must name BOTH gaps separately: catalogued-but-unchecked, and
+    # not catalogued at all. They are closed by different means, and a single
+    # "not covered" figure hides that.
+    assert "have no analyzer behind them at all" in md
+    assert "not in the knowledge base" in md
+    assert "enforcement method of" in md
 
 
 # ---- GRP legality (MISRA Compliance:2020 §5.4) ------------------------------
