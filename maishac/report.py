@@ -547,11 +547,32 @@ def enforcement_tools(mem: MemoryStore) -> list[dict]:
     """The tool inventory for the GEP: every static-analysis tool that could be
     enforcing guidelines here — Maisha's active analyzers (with live versions +
     options) plus any external engine whose SARIF was imported into memory."""
-    from .analyzers import available_analyzers
-    tools = [{
-        "tool": a.name, "version": a.version(), "options": a.options,
-        "kind": "native" if a.requires is None else "external analyzer",
-    } for a in available_analyzers()]
+    from .analyzers import ALL_ANALYZERS
+    tools = []
+    for cls in ALL_ANALYZERS:
+        a = cls()
+        if a.available():
+            tools.append({
+                "tool": a.name, "version": a.version(), "options": a.options,
+                "kind": "native" if a.requires is None else "external analyzer",
+                "status": "available",
+            })
+        else:
+            # An absent analyzer is a disclosure, not an omission. MISRA
+            # Compliance:2020 requires the GEP to record how each guideline is
+            # enforced *including* where no tool covers it — a plan that lists
+            # only the tools that happen to be installed reads as though the
+            # rest of the standard were checked and passed.
+            tools.append({
+                "tool": a.name, "version": "not installed",
+                "options": a.options,
+                # `requires` is None for the compiler adapter because it resolves
+                # gcc/clang/cc dynamically — it is still an external dependency,
+                # so don't let it inherit the "native" (always-present) label.
+                "kind": "native" if a.name == "native" else "external analyzer",
+                "status": "NOT INSTALLED - guidelines it would enforce were not checked",
+                "requires": a.requires or "gcc, clang or cc",
+            })
     # engines whose findings arrived via `maishac import` (analyzer = "sarif:<tool>")
     imported = sorted({r["analyzer"] for r in mem.db.execute(
         "SELECT DISTINCT analyzer FROM findings WHERE analyzer LIKE 'sarif:%'")})
@@ -592,13 +613,26 @@ def guideline_enforcement_markdown(mem: MemoryStore, project_name: str = "") -> 
         "",
         "## Enforcement tools",
         "",
-        "| Tool | Version | Options | Role |",
-        "|---|---|---|---|",
+        "| Tool | Version | Options | Role | Status |",
+        "|---|---|---|---|---|",
     ]
     for t in gep["tools"]:
-        L.append(f"| {t['tool']} | {t['version']} | {t['options']} | {t['kind']} |")
+        status = t.get("status", "available")
+        mark = "**NOT INSTALLED**" if t.get("version") == "not installed" else "available"
+        L.append(f"| {t['tool']} | {t['version']} | {t['options']} | {t['kind']} | {mark} |")
     if not gep["tools"]:
-        L.append("| _(none active)_ | | | |")
+        L.append("| _(none active)_ | | | | |")
+
+    absent = [t for t in gep["tools"] if t.get("version") == "not installed"]
+    if absent:
+        L += ["",
+              "> **Toolchain incomplete on the machine that generated this plan.** "
+              + ", ".join(f"`{t['tool']}` (needs {t.get('requires', '?')})" for t in absent)
+              + (" was" if len(absent) == 1 else " were")
+              + " not installed, so the guidelines they would enforce were **not "
+                "checked at all** — they are neither compliant nor in violation, they "
+                "are unexamined. Install the missing analyzers and regenerate before "
+                "presenting this plan as evidence."]
 
     L += ["", "## Per-guideline enforcement", "",
           f"This plan covers the **{gep['enforced']}** guidelines Maisha enforces. "

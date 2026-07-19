@@ -64,6 +64,14 @@ def compliance_scan(paths: list[str], analyzers: list[str] | None = None,
 
     Returns JSON with counts and a memory diff (new/persisting/resolved/
     regressed/suppressed/deviated). Use compliance_list_findings to see details.
+
+    IMPORTANT: the result carries a `toolchain` block and, when the machine is
+    missing analyzers, a `coverage_warning`. Maisha's native checks always run,
+    so a scan succeeds even with nothing else installed — it just silently
+    checks a fraction of the rules. If `coverage_warning` is present you MUST
+    relay it to the user and must not describe a clean or converged scan as
+    "compliant"; the unchecked rules were never examined. Call
+    compliance_doctor for the full picture.
     """
     return _j(_engine().scan(paths, analyzers, include_paths=include_paths))
 
@@ -100,6 +108,25 @@ def compliance_get_finding(fingerprint: str) -> str:
     detail = eng._brief(f)
     detail["fix_attempt_history"] = eng.mem.attempts_for(fingerprint)
     return _j(detail)
+
+
+@mcp.tool()
+def compliance_doctor() -> str:
+    """Diagnose what this machine can actually detect, and what it cannot.
+
+    Call this BEFORE starting a compliance session, and whenever a scan returns
+    a `coverage_warning`. Maisha's native analyzer is zero-dependency and always
+    runs, but the semantic rules are delegated to cppcheck and clang-tidy — so
+    the same scan on two machines can produce very different coverage with
+    nothing on screen to say so.
+
+    Returns per-group checks (environment, analyzers, rule coverage on this
+    machine, knowledge base, project memory), a summary of ok/warning/error
+    counts, and `healthy`. Use it to tell the user, concretely, which rules are
+    going unchecked and which tool would recover them.
+    """
+    from . import doctor
+    return _j(doctor.diagnose(os.environ.get("MAISHAC_PROJECT", os.getcwd())))
 
 
 # ---------------------------------------------------------------- rule intel

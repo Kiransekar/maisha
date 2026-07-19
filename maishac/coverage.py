@@ -43,7 +43,7 @@ _RULE_QUERY = re.compile(r'"((?:MISRA|CERT|BARR)[^"]*)"')
 # claiming the whole rule is not.
 NATIVE_PARTIAL = {
     "MISRA-C:2012 Rule 17.2":
-        "direct self-recursion only — mutual recursion, and any cycle that "
+        "direct self-recursion only - mutual recursion, and any cycle that "
         "crosses a translation unit, needs a whole-program call graph",
 }
 
@@ -100,6 +100,94 @@ def _compiler_ids() -> set[str]:
 def tier(rule_id: str, native: set[str] | None = None) -> str:
     """'enforced' if any analyzer detects the rule, else 'reference'."""
     return "enforced" if analyzers_for(rule_id, native) else "reference"
+
+
+def toolchain_status(selected: list[str] | None = None) -> dict:
+    """What this machine can detect right now, and what the gap costs.
+
+    Maisha's native analyzer is zero-dependency and always runs, so a scan on a
+    bare install *succeeds* — it just quietly checks a fraction of the rules it
+    knows about. A clean result then reads exactly like a clean result from a
+    full toolchain, which is the most dangerous failure mode a compliance tool
+    can have. Every path that draws a conclusion (scan, session, report) calls
+    this so the narrowing is stated rather than inferred.
+
+    Availability only — no subprocess probes, since this runs on every scan.
+    `maishac doctor` does the deeper checks (e.g. cppcheck present but missing
+    its MISRA addon, which silently removes all MISRA findings).
+
+    Args:
+        selected: analyzer names the caller explicitly asked for, if any. An
+            explicit narrowing is still reported, but as a choice rather than a
+            missing dependency.
+    """
+    from .analyzers import ALL_ANALYZERS
+
+    installed, missing = [], []
+    for cls in ALL_ANALYZERS:
+        an = cls()
+        if an.available():
+            installed.append(an.name)
+        else:
+            missing.append(an)
+
+    usable = set(installed)
+    if selected:
+        usable &= set(selected)
+
+    enforced = enforced_ids()
+    native = native_ids()
+    reachable = {rid for rid in enforced
+                 if any(m.split(" ")[0] in usable for m in analyzers_for(rid, native))}
+
+    gaps = []
+    for an in missing:
+        lost = sorted(rid for rid in enforced - reachable
+                      if an.name in [m.split(" ")[0] for m in analyzers_for(rid, native)])
+        if not lost:
+            continue
+        gaps.append({
+            "analyzer": an.name,
+            "needs": an.requires or "gcc, clang or cc",
+            "rules_lost": len(lost),
+            "examples": lost[:5],
+        })
+    gaps.sort(key=lambda g: -g["rules_lost"])
+
+    deselected = sorted(set(installed) - usable) if selected else []
+    total = len(enforced)
+    return {
+        "installed": sorted(installed),
+        "selected": sorted(selected) if selected else None,
+        "deselected": deselected,
+        "missing": gaps,
+        "rules_reachable": len(reachable),
+        "rules_enforced_total": total,
+        "rules_reference_only": len(reference_ids()),
+        "coverage_pct": round(100 * len(reachable) / total, 1) if total else 0.0,
+        "degraded": bool(gaps) or bool(deselected),
+    }
+
+
+def toolchain_warning(status: dict) -> str:
+    """One-paragraph, human-readable version of a degraded toolchain, or ''.
+
+    Deliberately blunt about what a clean scan does and does not mean here.
+    """
+    if not status["degraded"]:
+        return ""
+    L = [f"Reduced coverage: {status['rules_reachable']}/{status['rules_enforced_total']} "
+         f"detectable rules active ({status['coverage_pct']:.0f}%)."]
+    for g in status["missing"]:
+        L.append(f"  - {g['analyzer']} not installed ({g['needs']}): "
+                 f"{g['rules_lost']} rule(s) unchecked, e.g. "
+                 + ", ".join(g["examples"][:3]))
+    for name in status["deselected"]:
+        L.append(f"  - {name} is installed but was not selected for this run")
+    L.append("A clean result here does NOT mean the code is compliant with the "
+             "rules above - they were never checked. Run `maishac doctor` for "
+             "detail, or install the missing analyzers.")
+    return "\n".join(L)
 
 
 def enforced_ids(standard: str | None = None) -> set[str]:

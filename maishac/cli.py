@@ -43,10 +43,24 @@ def _print(obj) -> None:
     print(json.dumps(obj, indent=2, default=str))
 
 
+def _warn_coverage(result: dict) -> None:
+    """Surface a narrowed toolchain on stderr.
+
+    stderr specifically: stdout is JSON that gets piped into jq and CI steps, so
+    the warning must not corrupt it — but it must also not be invisible to the
+    human running the command, which is the whole point.
+    """
+    warning = result.get("coverage_warning")
+    if warning:
+        print(f"\nWARNING: {warning}\n", file=sys.stderr)
+
+
 def cmd_scan(args):
     eng = _engine(args)
-    _print(eng.scan(args.paths, args.analyzers.split(",") if args.analyzers else None,
-                    include_paths=args.include))
+    result = eng.scan(args.paths, args.analyzers.split(",") if args.analyzers else None,
+                      include_paths=args.include)
+    _print(result)
+    _warn_coverage(result)
 
 
 def cmd_check(args):
@@ -113,11 +127,13 @@ def cmd_session(args):
         # for 'begin', the first positional is a path, not a session id
         paths = ([args.session_id] if args.session_id else []) + list(args.paths or [])
         args.paths = paths or ["."]
-        _print(eng.begin_session(args.paths, {
+        out = eng.begin_session(args.paths, {
             "max_iterations": args.max_iterations, "batch_size": args.batch_size,
             "verification_policy": args.verification_policy,
             "test_command": args.test_command,
-            "include_paths": args.include}, force=args.force))
+            "include_paths": args.include}, force=args.force)
+        _print(out)
+        _warn_coverage(out)
     elif args.action == "batch":
         _print(eng.next_batch(args.session_id))
     elif args.action == "verify":
