@@ -5,6 +5,8 @@ All notable changes to Maisha are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-19
+
 ### Changed
 - **BARR-C:2018 summaries rewritten as independent restatements.** BARR-C is
   free to download but all rights are reserved, and its document licence
