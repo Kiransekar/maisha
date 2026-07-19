@@ -26,6 +26,56 @@ analyzer runs with zero dependencies and the suite passes without them.
 - Keep the diff focused; one concern per PR.
 - Add a line to `CHANGELOG.md` under `## [Unreleased]`.
 
+## Writing a native detector: measure before you test
+
+**Run the corpus before you write the tests, not after.** This is the single
+most important convention in the project, and it is the opposite of the usual
+habit.
+
+Every native detector here has been wrong at least once in a way its own unit
+tests could not catch, because a fixture written alongside an implementation
+encodes that implementation's model of C. It is blind to precisely the shapes
+the author did not think of. Real examples, all of which passed a full test
+suite first:
+
+| Rule | Corpus findings | The shape that was missed |
+|---|---:|---|
+| 20.1 | 927 | continuation lines of a multi-line `#define` counted as code |
+| 15.2 | 423 | `goto cleanup;` resolved against another function's label |
+| 16.3 | 452 | `#endif` between clauses read as the clause's last statement |
+| 20.11 | 109 | `a ## NAME ## b` matched via the 2nd char of the first paste |
+| 17.4 | 69 | returns hidden inside macros (`MBEDTLS_MPS_TRACE_RETURN`) |
+| 20.13 | 5 | continuation lines opening with `#` read as directives |
+
+So the order is:
+
+1. **Write the detector.**
+2. **Measure it** — `python tools/fp_check.py --rule 16.6 --show 5`. Start with
+   one project (`--project littlefs` is seconds) and widen.
+3. **Triage every hit.** True positive → regression test. False positive → a
+   negative test *and* a fix, or withdraw the check.
+4. **Then write the tests**, using what the corpus taught you.
+5. **Add the shape to `tests/fixtures/pathological.c`** so the next detector
+   gets it for free, in milliseconds.
+
+### Zero findings is a result to distrust, not celebrate
+
+A check that fires nowhere is indistinguishable from a check that is switched
+off, and this project has shipped a disabled rule reported as "clean, zero
+findings" more than once. `fp_check.py` names silent rules explicitly for this
+reason. Before believing a zero, confirm the check fires on a crafted positive.
+
+### When to withdraw a check
+
+Precision beats coverage here. `native.py` is a *lexical* analyzer, and several
+rules are simply not decidable without a parser, a type model, or a control-flow
+graph. If a rule needs to know whether a call returns (16.3, 17.4), which `#if`
+branch is live (20.1), or an expression's essential type (16.7), withdraw it and
+map it to cppcheck. Record the measurement in the commit message so the next
+person does not repeat the attempt. A rule carried in the knowledge base but
+detected by an external engine is still fully useful — it cross-references,
+appears in the Guideline Enforcement Plan, and maps imported SARIF.
+
 ## The three things most contributions add
 
 ### 1. A rule (knowledge base)

@@ -111,7 +111,6 @@ _TRIGRAPH_RE = re.compile(r"\?\?[=/'()!<>\-]")
 _VLA_RE = re.compile(r"\b(?:int|char|float|double|long|short|uint\d+_t|int\d+_t|size_t)\s+\w+\s*\[\s*([a-zA-Z_]\w*)\s*\]")
 _MACRO_CONST_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 _FLOAT_EQ_RE = re.compile(r"\b(float|double)\b")
-_FUNC_DEF_RE = re.compile(r"^\s*(?:static\s+|inline\s+|extern\s+)*[A-Za-z_][\w\s\*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{?\s*$")
 _BASIC_TYPE_DECL_RE = re.compile(r"^\s*(?:static\s+|const\s+|volatile\s+|extern\s+)*(?:unsigned\s+|signed\s+)?(int|short|long)\b(?!\s*\()")
 _COMMENTED_CODE_RE = re.compile(r"(;|\{|\}|\breturn\b|=)")
 _PREPROC_RE = re.compile(r"^\s*#")
@@ -224,6 +223,85 @@ def _param_names(param_text: str) -> list[str]:
         p = p.strip()
         if p and p != "..." and re.fullmatch(r"[A-Za-z_]\w*", p):
             out.append(p)
+    return out
+
+
+# Keywords that begin a control statement, which also looks like `name (...)`.
+_NOT_A_FUNCTION = {"if", "else", "for", "while", "switch", "return", "do",
+                   "sizeof", "case", "default", "goto", "typedef", "break",
+                   "continue", "_Static_assert", "static_assert"}
+# The opening of a function signature. Deliberately does not require the closing
+# paren on the same line -- see _function_definitions.
+_FUNC_SIG_START_RE = re.compile(
+    r"^\s*(?:(?:static|inline|extern|const|volatile|unsigned|signed|struct|"
+    r"union|enum|_Noreturn)\s+)*[A-Za-z_][\w\s\*]*?\b([A-Za-z_]\w*)\s*\(")
+_MAX_SIGNATURE_LINES = 12
+
+
+def _function_definitions(lines: list[str]) -> dict[int, dict]:
+    """Map 1-based line number -> {name, sig} for every function *definition*.
+
+    Replaces a single-line regex that required the whole signature, closing
+    paren included, to fit on one line. mbedtls, lwip and zephyr routinely wrap
+    signatures across two or three lines, so that regex simply did not see those
+    functions -- and every check that depends on knowing which function it is
+    inside degraded silently as a result. It is the direct cause of Rule 15.2
+    being withdrawn (labels resolved against a different function's label), and
+    it weakened 17.2 (recursion) and 12.5 (sizeof on an array parameter) on
+    exactly the codebases most worth scanning.
+
+    Declarations (ending in `;`) are excluded: only definitions, which are
+    followed by `{` here or on the next significant line.
+    """
+    out: dict[int, dict] = {}
+    i, n = 0, len(lines)
+    while i < n:
+        line = lines[i]
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            i += 1
+            continue
+        m = _FUNC_SIG_START_RE.match(line)
+        # A control statement matches the same shape (`if (`, `while (`), and so
+        # does a call used as a statement. Reject on the first word and on the
+        # captured name.
+        # A line may begin with '(' -- e.g. the `(void)x;` discard idiom -- in
+        # which case there is no leading word at all.
+        head = stripped.split("(")[0].split()
+        first = head[0] if head else ""
+        if not m or m.group(1) in _NOT_A_FUNCTION or first in _NOT_A_FUNCTION:
+            i += 1
+            continue
+
+        depth, started, j, parts = 0, False, i, []
+        while j < n and (j - i) < _MAX_SIGNATURE_LINES:
+            parts.append(lines[j])
+            for ch in lines[j]:
+                if ch == "(":
+                    depth += 1
+                    started = True
+                elif ch == ")":
+                    depth -= 1
+            if started and depth == 0:
+                break
+            j += 1
+        if not started or depth != 0:
+            i += 1
+            continue
+
+        text = " ".join(p.strip() for p in parts)
+        tail = text[text.rindex(")") + 1:].strip()
+        if tail.startswith("{"):
+            out[i + 1] = {"name": m.group(1), "sig": text}
+        elif tail == "":
+            # A definition may put its brace on the following line; a
+            # declaration ends in ';' and must not be counted.
+            k = j + 1
+            while k < n and (not lines[k].strip() or lines[k].lstrip().startswith("#")):
+                k += 1
+            if k < n and lines[k].lstrip().startswith("{"):
+                out[i + 1] = {"name": m.group(1), "sig": text}
+        i = j + 1
     return out
 
 
@@ -500,6 +578,9 @@ class NativeAnalyzer(Analyzer):
         # which of its parameters are declared in array form (12.5).
         func_stack: list[dict] = []
         pending_func: dict | None = None
+        # Resolved up front so multi-line signatures are recognised; see
+        # _function_definitions for why a per-line regex was not enough.
+        func_defs = _function_definitions(clean_lines)
         # Each switch carries the state sections 16.2/16.5/16.6 need: where its
         # labels are, at what brace depth each sits, and how many case clauses
         # it has.
@@ -587,7 +668,9 @@ class NativeAnalyzer(Analyzer):
             # functions) unusably slow (see BENCHMARK-SUITE-REPORT.md).
             if func_stack:
                 cur_name = func_stack[-1]["name"]
-                if re.search(rf"(?<![\w.]){re.escape(cur_name)}\s*\(", line) and not _FUNC_DEF_RE.match(line):
+                # `i not in func_defs` excludes the definition's own line, which
+                # names the function without calling it.
+                if re.search(rf"(?<![\w.]){re.escape(cur_name)}\s*\(", line) and i not in func_defs:
                     add("MISRA 17.2", i, f"direct recursion: '{cur_name}' calls itself")
 
             # MISRA 17.6 (mandatory): static/qualifier in array parameter brackets
@@ -610,11 +693,12 @@ class NativeAnalyzer(Analyzer):
                             f"sizeof applied to array parameter '{name}' "
                             "— it decayed to a pointer")
 
-            fm = _FUNC_DEF_RE.match(line)
-            if fm and not line.strip().startswith(("if", "for", "while", "switch", "return", "else")):
+            if (fdef := func_defs.get(i)) is not None:
                 pending_func = {
-                    "name": fm.group(1), "start": i,
-                    "array_params": _array_param_names(line),
+                    "name": fdef["name"], "start": i,
+                    # Read parameters off the JOINED signature, so an array
+                    # parameter declared on a wrapped line is still seen.
+                    "array_params": _array_param_names(fdef["sig"]),
                     "gotos": [], "labels": {},
                 }
 
