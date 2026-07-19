@@ -24,7 +24,7 @@ construct, so treat the external columns as an upper bound. `**not
 detected**` means no engine we know of covers the rule: the entry is
 carried for cross-referencing, deviation records and SARIF import.
 
-## MISRA-C:2012 — 51 rules (22 detected with zero dependencies)
+## MISRA-C:2012 — 63 rules (28 detected with zero dependencies)
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
@@ -55,7 +55,17 @@ carried for cross-referencing, deviation records and SARIF import.
 | MISRA-C:2012 Rule 17.2 | required | critical | native (partial), cppcheck | Functions shall not call themselves directly or indirectly (no recursion). |
 | MISRA-C:2012 Rule 17.7 | required | critical | cppcheck, compiler | The value returned by a non-void function shall be used or explicitly discarded. |
 | MISRA-C:2012 Rule 18.8 | required | critical | native, cppcheck, compiler | Variable-length arrays shall not be used. |
+| MISRA-C:2012 Rule 20.11 | required | critical | native, cppcheck | A macro parameter immediately following a # operator must not be immediately followed by a ## operator. |
+| MISRA-C:2012 Rule 20.12 | required | critical | cppcheck | A macro parameter used as an operand of # or ## must not also be used with normal expansion elsewhere in the macro. |
+| MISRA-C:2012 Rule 20.13 | required | critical | native, cppcheck | A line whose first token is # must be a valid preprocessing directive. |
+| MISRA-C:2012 Rule 20.14 | required | critical | native, cppcheck | All #else and #endif directives must reside in the same file as the #if / #ifdef / #ifndef they close. |
+| MISRA-C:2012 Rule 20.2 | required | critical | native, cppcheck | A header file name must not contain characters whose handling is undefined -- ', ", \ or a comment-opening sequence. |
+| MISRA-C:2012 Rule 20.3 | required | critical | native, cppcheck | #include must be followed by a well-formed <header> or "header" name, or by a macro that expands to one. |
 | MISRA-C:2012 Rule 20.4 | required | critical | cppcheck | A macro shall not share its name with a language keyword. |
+| MISRA-C:2012 Rule 20.6 | required | critical | cppcheck | Tokens that look like a preprocessing directive must not appear inside the arguments of a function-like macro. |
+| MISRA-C:2012 Rule 20.7 | required | critical | cppcheck | Expressions resulting from macro parameter expansion must be enclosed in parentheses. |
+| MISRA-C:2012 Rule 20.8 | required | critical | cppcheck | The controlling expression of #if or #elif must evaluate to 0 or 1. |
+| MISRA-C:2012 Rule 20.9 | required | critical | cppcheck | Every identifier in a #if or #elif controlling expression must be a macro that is defined at that point. |
 | MISRA-C:2012 Rule 21.10 | required | critical | cppcheck | Date/time facilities of <time.h> shall not be used. |
 | MISRA-C:2012 Rule 21.3 | required | critical | native, cppcheck | malloc/calloc/realloc/free from <stdlib.h> shall not be used. |
 | MISRA-C:2012 Rule 21.4 | required | critical | native, cppcheck | <setjmp.h> shall not be used. |
@@ -75,6 +85,8 @@ carried for cross-referencing, deviation records and SARIF import.
 | MISRA-C:2012 Rule 15.1 | advisory | minor | native, cppcheck | The goto statement should not be used. |
 | MISRA-C:2012 Rule 15.5 | advisory | minor | cppcheck | A function should have a single point of exit at the end. |
 | MISRA-C:2012 Rule 19.2 | advisory | minor | native, cppcheck | The union keyword should not be used. |
+| MISRA-C:2012 Rule 20.1 | advisory | minor | cppcheck | #include directives should appear before any other preprocessor directive or code in a file. |
+| MISRA-C:2012 Rule 20.10 | advisory | minor | native, cppcheck | The # (stringize) and ## (token paste) preprocessor operators should not be used. |
 | MISRA-C:2012 Rule 20.5 | advisory | minor | native, cppcheck | #undef should not be used. |
 | MISRA-C:2012 Rule 4.2 | advisory | minor | native, cppcheck | Trigraphs should not be used. |
 | MISRA-C:2012 Rule 8.13 | advisory | minor | cppcheck | A pointer should point to a const-qualified type whenever the pointed-to object is not modified through it. |
@@ -141,4 +153,4 @@ carried for cross-referencing, deviation records and SARIF import.
 | CERT STR31-C | - | blocker | native, cppcheck | Guarantee destination storage is large enough for string data plus the null terminator (gets/strcpy/strcat/sprintf are unbounded). |
 | CERT STR32-C | - | blocker | cppcheck | Do not pass non-null-terminated character sequences to functions that expect strings. |
 
-_Total: 102 rules across 3 standards._
+_Total: 114 rules across 3 standards._

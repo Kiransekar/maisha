@@ -141,6 +141,73 @@ _SIZEOF_SIDE_EFFECT_RE = re.compile(r"\+\+|--|(?<![=!<>+\-*/%&|^])=(?!=)")
 # which has one; the KB carries the rule for that path and for deviation records.
 
 
+# --- MISRA section 20: the preprocessor -------------------------------------
+# The densest block of Decidable / single-translation-unit rules in the
+# standard, and the one a lexical analyzer can implement most honestly: these
+# rules are *about* the token stream, so there is nothing semantic to miss.
+#
+# Directive names accepted by Rule 20.13. Includes the widely-implemented
+# extensions (#warning, #include_next, #ident) deliberately: flagging them here
+# would bury real malformed-directive findings under noise in any real firmware
+# tree, and "this is a language extension" is Rule 1.2's job, not 20.13's.
+# A line containing only `#` is the null directive, which is valid C.
+_VALID_DIRECTIVES = {
+    "include", "define", "undef", "if", "ifdef", "ifndef", "elif", "else",
+    "endif", "line", "error", "pragma", "warning", "include_next", "ident",
+    "sccs", "assert", "unassert", "elifdef", "elifndef", "embed",
+}
+_DIRECTIVE_RE = re.compile(r"^\s*#\s*(\w+)?")
+_INCLUDE_RE = re.compile(r"^\s*#\s*include\s*(.*)$")
+_WELL_FORMED_INCLUDE_RE = re.compile(r"^(?:<[^>]*>|\"[^\"]*\"|[A-Za-z_]\w*)")
+# Characters undefined inside a header name (Rule 20.2). The quote/apostrophe
+# cases are checked per-delimiter below, since a " is legal as the delimiter.
+_BAD_IN_ANGLE = ("'", '"', "\\", "/*", "//")
+_BAD_IN_QUOTE = ("'", "\\", "/*", "//")
+_DEFINE_RE = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)\s*(\(([^)]*)\))?(.*)$")
+# A lone # is stringize; ## is paste. The (?<!#)#(?!#) guard is load-bearing:
+# without it, `a ## NAME ## b` matches as "# NAME ##" by grabbing the second
+# character of the first paste operator, and every ordinary two-step paste is
+# reported as a Rule 20.11 violation.
+_STRINGIZE_RE = re.compile(r"(?<!#)#(?!#)\s*[A-Za-z_]\w*")
+_PASTE_RE = re.compile(r"##")
+_HASH_THEN_PASTE_RE = re.compile(r"(?<!#)#(?!#)\s*[A-Za-z_]\w*\s*##")
+_IF_OPEN_RE = re.compile(r"^\s*#\s*(if|ifdef|ifndef)\b")
+_IF_CLOSE_RE = re.compile(r"^\s*#\s*endif\b")
+_IF_MID_RE = re.compile(r"^\s*#\s*(else|elif|elifdef|elifndef)\b")
+
+
+def _logical_preproc(lines: list[str]) -> list[tuple[int, str]]:
+    """Join backslash-continued preprocessor directives into logical lines.
+
+    Returns (1-based line number of the directive's first line, joined text).
+    Without this every multi-line macro -- which is most non-trivial macros in
+    embedded code -- would be analysed as fragments, and the body checks below
+    would see only the first line.
+    """
+    out = []
+    i, n = 0, len(lines)
+    while i < n:
+        if lines[i].lstrip().startswith("#"):
+            start = i
+            parts = [lines[i].rstrip()]
+            while parts[-1].endswith("\\") and i + 1 < n:
+                parts[-1] = parts[-1][:-1]
+                i += 1
+                parts.append(lines[i].rstrip())
+            out.append((start + 1, " ".join(p.strip() for p in parts)))
+        i += 1
+    return out
+
+
+def _param_names(param_text: str) -> list[str]:
+    out = []
+    for p in param_text.split(","):
+        p = p.strip()
+        if p and p != "..." and re.fullmatch(r"[A-Za-z_]\w*", p):
+            out.append(p)
+    return out
+
+
 def _array_param_names(decl: str) -> set[str]:
     """Names of parameters declared in array form, from a function-definition
     line. These decay to pointers, so sizeof on them is Rule 12.5."""
@@ -209,6 +276,137 @@ class NativeAnalyzer(Analyzer):
             cross_refs=REGISTRY.cross_refs(meta["id"]),
             fix_hint=meta.get("fix", ""),
         )
+
+    def _preprocessor_checks(self, raw_lines: list[str], clean_lines: list[str],
+                             add) -> None:
+        """MISRA section 20 (preprocessor).
+
+        Header-name checks read the RAW line: strip_comments_strings blanks the
+        contents of string literals, which is exactly where a header name lives,
+        so `#include "a\\b.h"` would arrive as `#include "      "` and the whole
+        rule would silently never fire.
+
+        Macro-body checks read the CLEAN line, so a `#` or `##` inside a string
+        literal is not mistaken for a stringize/paste operator.
+        """
+        # Resolve the file's directive structure ONCE. Both pieces are
+        # load-bearing, and getting either wrong produces corpus-wide noise:
+        #
+        #   starts  -- line numbers where a logical directive begins. A
+        #              continuation line can itself start with '#' (a stringize
+        #              operator opening a line inside an inline-asm macro, e.g.
+        #              zephyr's `#CRm ", " #op2 : "=r" (val)`), and reading
+        #              those as directives reported every one as an invalid
+        #              directive name.
+        #   covered -- every line belonging to a directive, continuations
+        #              included. Continuation lines do NOT start with '#', so
+        #              without this the body of any multi-line #define counts as
+        #              "code" and every conditional #include after it in a
+        #              header is flagged. That produced 927 findings across the
+        #              benchmark corpus, essentially all of them wrong.
+        logical = _logical_preproc(clean_lines)
+        starts = {lineno for lineno, _ in logical}
+        covered = set()
+        for start, _ in logical:
+            j = start - 1
+            while j < len(clean_lines):
+                covered.add(j + 1)
+                if not clean_lines[j].rstrip().endswith("\\"):
+                    break
+                j += 1
+
+        # Rule 20.1 (#include should precede other code) is deliberately NOT
+        # implemented here. It cannot be decided without knowing which
+        # conditional branch is active, and a branch-blind lexer sees code that
+        # the compiler never does. 820 findings across the benchmark corpus,
+        # dominated by two patterns that are correct C:
+        #
+        #   static int wsa_init_done = 0;   /* only exists when _WIN32 */
+        #   #else
+        #   #include <sys/types.h>          /* nothing precedes it in THIS branch */
+        #
+        #   #ifdef __cplusplus
+        #   extern "C" {                    /* absent from a C translation unit */
+        #   #endif
+        #   #include <mbedtls/platform_time.h>
+        #
+        # cppcheck's addon implements 20.1 with a real preprocessor; the KB
+        # carries the rule for that path and for deviation records.
+
+        # --- 20.13: a line starting with # must be a valid directive --------
+        # --- 20.14: #else/#endif must be in the same file as their #if ------
+        depth = 0
+        for i, raw in enumerate(raw_lines, start=1):
+            if i not in starts or not raw.lstrip().startswith("#"):
+                continue
+            m = _DIRECTIVE_RE.match(raw)
+            name = m.group(1) if m else None
+            if name is None:
+                continue  # bare '#' is the null directive, which is valid
+            if name not in _VALID_DIRECTIVES:
+                add("MISRA 20.13", i, f"'#{name}' is not a valid preprocessing directive")
+                continue
+            if _IF_OPEN_RE.match(raw):
+                depth += 1
+            elif _IF_CLOSE_RE.match(raw):
+                depth -= 1
+                if depth < 0:
+                    add("MISRA 20.14", i,
+                        "#endif has no matching #if in this file")
+                    depth = 0
+            elif _IF_MID_RE.match(raw) and depth == 0:
+                add("MISRA 20.14", i,
+                    f"#{name} has no matching #if in this file")
+        if depth > 0:
+            add("MISRA 20.14", len(raw_lines) or 1,
+                f"{depth} conditional block(s) left open at end of file")
+
+        # --- 20.2 / 20.3: header names --------------------------------------
+        for i, raw in enumerate(raw_lines, start=1):
+            im = _INCLUDE_RE.match(raw)
+            if not im or i not in starts:
+                continue
+            rest = im.group(1).strip()
+            # Extract the delimited header name FIRST. A trailing comment can
+            # only be stripped from the macro form: inside <> or "", a '/*' is
+            # part of the name and is precisely what Rule 20.2 exists to catch,
+            # so cutting at it here would convert every 20.2 into a bogus 20.3.
+            if rest.startswith("<") and ">" in rest:
+                name, bad = rest[1:rest.index(">")], _BAD_IN_ANGLE
+            elif rest.startswith('"') and rest.count('"') >= 2:
+                name, bad = rest[1:rest.index('"', 1)], _BAD_IN_QUOTE
+            else:
+                for cut in ("/*", "//"):
+                    if (idx := rest.find(cut)) > 0:
+                        rest = rest[:idx].strip()
+                if not _WELL_FORMED_INCLUDE_RE.match(rest):
+                    add("MISRA 20.3", i,
+                        "#include is not followed by a well-formed <header> or \"header\"")
+                continue  # macro-expanded form; can't judge without preprocessing
+            for ch in bad:
+                if ch in name:
+                    shown = "\\\\" if ch == "\\" else ch
+                    add("MISRA 20.2", i,
+                        f"header name '{name}' contains '{shown}', whose handling "
+                        "in a header name is undefined")
+                    break
+
+        # --- 20.10 / 20.11: the # and ## operators --------------------------
+        for lineno, text in _logical_preproc(clean_lines):
+            dm = _DEFINE_RE.match(text)
+            if not dm:
+                continue
+            body = dm.group(4) or ""
+            has_paste = _PASTE_RE.search(body)
+            has_stringize = _STRINGIZE_RE.search(body)
+            if has_paste or has_stringize:
+                op = "##" if has_paste else "#"
+                add("MISRA 20.10", lineno,
+                    f"macro '{dm.group(1)}' uses the {op} preprocessor operator")
+            if _HASH_THEN_PASTE_RE.search(body):
+                add("MISRA 20.11", lineno,
+                    f"macro '{dm.group(1)}': a # operand is immediately followed "
+                    "by ##, and their evaluation order is unspecified")
 
     def _analyze_file(self, f: Path, src: str, root: Path) -> list[Finding]:
         out: list[Finding] = []
@@ -342,5 +540,7 @@ class NativeAnalyzer(Analyzer):
         for start, _, saw_default in switch_stack:  # unterminated at EOF
             if not saw_default:
                 add("MISRA 16.4", start, "switch statement has no default label")
+
+        self._preprocessor_checks(raw_lines, clean_lines, add)
 
         return [f for f in out if f is not None]

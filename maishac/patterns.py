@@ -508,6 +508,69 @@ PATTERNS: list[dict] = [
                "the standards can't.",
     },
     {
+        "concern": "include directives and header names",
+        "keywords": ["include", "header", "#include", "header name", "path",
+                     "include order", "backslash"],
+        "rules": ["MISRA 20.1", "MISRA 20.2", "MISRA 20.3"],
+        "avoid": "static int state;\n"
+                 "#include \"driver\\uart.h\"   /* after code, and a backslash */",
+        "prefer": "#include <stdint.h>\n"
+                  "#include \"driver/uart.h\"  /* all includes first, forward slashes */\n"
+                  "\n"
+                  "static int32_t state;",
+        "why": "A backslash, apostrophe or comment-opening sequence inside a "
+               "header name is undefined behaviour, not a path separator - use "
+               "forward slashes even on Windows. Keeping every #include at the "
+               "top also keeps the translation unit's dependencies readable in "
+               "one glance.",
+    },
+    {
+        "concern": "macro parameter parenthesization",
+        "keywords": ["macro", "parameter", "parentheses", "expansion", "precedence",
+                     "function-like macro", "define"],
+        "rules": ["MISRA 20.7"],
+        "avoid": "#define SQUARE(x)  x * x\n"
+                 "/* SQUARE(a + b) expands to a + b * a + b */",
+        "prefer": "#define SQUARE(x)  ((x) * (x))\n"
+                  "/* better still: static inline uint32_t square(uint32_t x) */",
+        "why": "A macro parameter is substituted as raw tokens, so an unparenthesized "
+               "use inherits the caller's operator precedence and silently computes "
+               "something else. Parenthesize every parameter and the whole body - or "
+               "use a real function, which has none of this problem.",
+    },
+    {
+        "concern": "stringize and token-paste operators",
+        "keywords": ["##", "token paste", "stringize", "concatenation", "macro operator",
+                     "#x"],
+        "rules": ["MISRA 20.10", "MISRA 20.11", "MISRA 20.12"],
+        "avoid": "#define MAKE_ID(a, b)  a ## b\n"
+                 "#define TRACE(x)       #x ## _tag   /* order unspecified */",
+        "prefer": "/* name things explicitly; pass the string you want */\n"
+                  "static void trace(const char *tag);\n"
+                  "trace(\"sensor_reset\");",
+        "why": "Pasted identifiers cannot be grepped, stepped through in a debugger "
+               "or found by a reviewer, and adjacent # and ## have unspecified "
+               "evaluation order. If a parameter is both pasted and expanded "
+               "normally, take two parameters instead.",
+    },
+    {
+        "concern": "conditional compilation blocks",
+        "keywords": ["#if", "#ifdef", "#endif", "#else", "conditional compilation",
+                     "defined", "feature flag", "directive"],
+        "rules": ["MISRA 20.6", "MISRA 20.8", "MISRA 20.9", "MISRA 20.13",
+                  "MISRA 20.14"],
+        "avoid": "#if CONFIG_UART        /* undefined if never #define'd -> 0 */\n"
+                 "  ...\n"
+                 "/* #endif living in a different file */",
+        "prefer": "#if defined(CONFIG_UART) && (CONFIG_UART != 0)\n"
+                  "  ...\n"
+                  "#endif  /* CONFIG_UART - opened and closed in this file */",
+        "why": "An identifier that was never defined silently evaluates to 0, so a "
+               "typo'd feature flag quietly disables the feature instead of failing "
+               "the build. Compare explicitly, and keep every #if and its #endif in "
+               "one file so the block can be read without chasing includes.",
+    },
+    {
         "concern": "sizeof pitfalls (array parameters, side effects)",
         "keywords": ["sizeof", "array parameter", "array size", "decay", "pointer size",
                      "side effect", "element count"],
