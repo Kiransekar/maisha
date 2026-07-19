@@ -42,7 +42,7 @@ def _findings():
 # useful: none of the rules that have previously misfired on real firmware may
 # fire on these shapes.
 _RULES_THAT_HAVE_MISFIRED = ["20.1", "20.2", "20.11", "20.13",
-                             "15.2", "16.2", "16.3", "16.6", "12.5", "17.6"]
+                             "15.2", "16.2", "16.3", "16.6", "12.5", "17.6", "17.2"]
 
 
 @pytest.mark.parametrize("rule", _RULES_THAT_HAVE_MISFIRED)

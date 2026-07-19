@@ -708,9 +708,17 @@ class NativeAnalyzer(Analyzer):
                 add("CERT FLP37-C", i, "floating-point equality comparison")
 
             # switch/default tracking
-            depth += line.count("{") - line.count("}")
+            brace_delta = line.count("{") - line.count("}")
+            depth += brace_delta
             if pending_func is not None and "{" in line:
-                pending_func["depth"] = depth
+                # The frame's depth is the level its opening brace created, NOT
+                # the depth left at the end of the line. For a one-line
+                # definition such as `static void setdebug(int a) {debug = a;}`
+                # those differ: the line nets to zero, so a frame recorded at
+                # the end-of-line depth can never satisfy `depth < frame` and
+                # never closes -- it absorbs the rest of the file, and every
+                # later call to that function reads as recursion.
+                pending_func["depth"] = (depth - brace_delta) + 1
                 func_stack.append(pending_func)
                 pending_func = None
             while func_stack and func_stack[-1]["depth"] > depth:

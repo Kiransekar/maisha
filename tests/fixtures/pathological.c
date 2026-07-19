@@ -14,6 +14,8 @@
 
 #include <stdint.h>
 
+static int debug_level;
+
 /* --- multi-line macro: body lines do not start with '#' (broke 20.1) ----- */
 #define WIDE_MACRO(a, b) \
     do {                 \
@@ -80,6 +82,19 @@ static int parse_other(const unsigned char **p,
     ret = 1;
 out:
     return ret;
+}
+
+/* --- one-line function definition (broke 17.2) --------------------------- */
+/* The body opens and closes on the signature's own line, so the line nets to
+ * zero braces. A frame recorded at the end-of-line depth can never close, and
+ * absorbs the rest of the file -- making every later call to this function
+ * look like recursion. lwip's test suite is full of these. */
+static void set_debug(int a) { debug_level = a; }
+
+static void calls_it_twice(void)
+{
+    set_debug(1);              /* not recursion: a different function */
+    set_debug(0);
 }
 
 /* --- switch: label with a brace on its own line (broke 16.2 / 16.6) ------ */
