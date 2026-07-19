@@ -126,40 +126,131 @@ carried for cross-referencing, deviation records and SARIF import.
 | BARR-C 8.5a | - | major | **not detected** | Every switch shall end with a default case that traps unexpected values. |
 | BARR-C 8.6a | - | major | **not detected** | Loops shall have provably bounded termination (no unbounded while(1) without exit intent documented). |
 
-## CERT-C — 31 rules (7 detected with zero dependencies)
+## CERT-C — 122 rules (7 detected with zero dependencies)
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
 | CERT ARR30-C | - | blocker | cppcheck | Do not form or use out-of-bounds pointers or array subscripts. |
 | CERT ARR32-C | - | critical | cppcheck | Ensure size arguments for variable-length arrays are valid and bounded. |
+| CERT ARR36-C | - | critical | **not detected** | Only subtract or relationally compare pointers into the same array. |
+| CERT ARR37-C | - | critical | **not detected** | Do not do pointer arithmetic on a pointer to a non-array object. |
+| CERT ARR38-C | - | blocker | **not detected** | Do not pass library functions arguments that make them form invalid pointers. |
+| CERT ARR39-C | - | blocker | clang-tidy | Do not add an already byte-scaled integer to a typed pointer. |
+| CERT CON30-C | - | major | **not detected** | Release thread-specific storage before the thread ends. |
+| CERT CON31-C | - | major | **not detected** | Do not destroy a mutex that is still held. |
+| CERT CON32-C | - | major | **not detected** | Synchronize access to bit-fields shared between threads. |
 | CERT CON33-C | - | critical | native | Avoid race conditions from library functions that use static internal state. |
+| CERT CON34-C | - | major | **not detected** | Give thread-shared objects a storage duration spanning every accessing thread. |
+| CERT CON35-C | - | major | **not detected** | Acquire multiple locks in one global order to prevent deadlock. |
+| CERT CON36-C | - | major | clang-tidy | Loop around any wait that can wake spuriously. |
+| CERT CON37-C | - | major | **not detected** | Do not call signal() in a multithreaded program. |
+| CERT CON38-C | - | major | **not detected** | Use condition variables so that both safety and liveness hold. |
+| CERT CON39-C | - | major | **not detected** | Do not join or detach a thread that was already joined or detached. |
+| CERT CON40-C | - | critical | **not detected** | Do not reference the same atomic object twice within one expression. |
+| CERT CON41-C | - | major | **not detected** | Loop around calls that may fail spuriously. |
+| CERT CON43-C | - | critical | **not detected** | Eliminate data races in multithreaded code. |
 | CERT DCL30-C | - | blocker | cppcheck | Do not let object addresses escape their lifetime (e.g., returning pointers to locals). |
+| CERT DCL31-C | - | major | **not detected** | Declare every identifier before it is used. |
+| CERT DCL36-C | - | critical | **not detected** | Do not give one identifier contradictory linkage classifications. |
 | CERT DCL37-C | - | major | clang-tidy | Do not declare or define reserved identifiers (leading underscore, standard names). |
+| CERT DCL38-C | - | major | **not detected** | Use the standard syntax when declaring a flexible array member. |
+| CERT DCL39-C | - | major | **not detected** | Do not let padding or uninitialized struct bytes cross a trust boundary. |
+| CERT DCL40-C | - | major | **not detected** | Do not declare the same function or object in two incompatible ways. |
+| CERT DCL41-C | - | critical | **not detected** | Do not declare variables inside a switch body before the first case label. |
+| CERT DCL42-C | - | major | **not detected** | Assert the unsequenced or reproducible attributes only on functions that truly have them. |
+| CERT ENV30-C | - | major | **not detected** | Do not modify the object referenced by a function's const-in-spirit return value. |
+| CERT ENV31-C | - | major | **not detected** | Do not reuse an environment pointer after an operation that may invalidate it. |
+| CERT ENV32-C | - | blocker | **not detected** | Make every exit handler return normally rather than terminating or jumping. |
 | CERT ENV33-C | - | blocker | native, clang-tidy | Do not invoke command processors via system(). |
+| CERT ENV34-C | - | major | **not detected** | Do not retain pointers returned by functions whose buffers may be reused. |
+| CERT ERR30-C | - | critical | **not detected** | Set errno to zero before the call, and test it only where the standard defines it. |
+| CERT ERR32-C | - | major | **not detected** | Do not treat errno as meaningful when its value is indeterminate. |
 | CERT ERR33-C | - | critical | clang-tidy, cppcheck | Detect and handle standard library errors (check return values). |
 | CERT ERR34-C | - | critical | native, clang-tidy | Detect errors when converting strings to numbers (atoi cannot report failure). |
+| CERT EXP30-C | - | critical | **not detected** | Do not write code whose result depends on the order side effects are evaluated in. |
+| CERT EXP32-C | - | critical | **not detected** | Never access a volatile object through a non-volatile reference. |
 | CERT EXP33-C | - | blocker | cppcheck, compiler | Do not read uninitialized memory. |
 | CERT EXP34-C | - | blocker | cppcheck | Do not dereference null pointers. |
+| CERT EXP35-C | - | critical | **not detected** | Do not modify an object that has only temporary lifetime. |
+| CERT EXP36-C | - | major | **not detected** | Do not cast a pointer to a type with stricter alignment requirements. |
+| CERT EXP37-C | - | major | **not detected** | Pass exactly the number and types of arguments a function expects. |
 | CERT EXP39-C | - | critical | **not detected** | Do not access an object through a pointer of an incompatible type. |
+| CERT EXP40-C | - | major | **not detected** | Never modify an object declared const. |
+| CERT EXP42-C | - | blocker | clang-tidy | Do not include padding bytes when comparing structures. |
+| CERT EXP43-C | - | major | **not detected** | Respect the aliasing contract of restrict-qualified pointers. |
+| CERT EXP44-C | - | major | **not detected** | Do not rely on side effects inside sizeof, _Alignof or _Generic. |
 | CERT EXP45-C | - | major | clang-tidy | Do not perform assignments inside selection or iteration condition expressions. |
+| CERT EXP46-C | - | critical | **not detected** | Do not use a Boolean-valued expression as an operand of a bitwise operator. |
+| CERT EXP47-C | - | critical | **not detected** | Do not request a type from va_arg that does not match what was passed. |
 | CERT FIO30-C | - | blocker | **not detected** | Never pass externally influenced data as a printf-family format string. |
+| CERT FIO32-C | - | major | **not detected** | Do not apply file-only operations to a device. |
 | CERT FIO34-C | - | critical | **not detected** | Distinguish characters read from a file from EOF/WEOF. |
+| CERT FIO37-C | - | blocker | **not detected** | Do not assume a successful fgets or fgetws yields a non-empty string. |
+| CERT FIO38-C | - | major | clang-tidy | Do not copy a FILE object by value. |
+| CERT FIO39-C | - | critical | **not detected** | Flush or reposition a stream when switching between reading and writing. |
+| CERT FIO40-C | - | critical | **not detected** | Reset the destination string when fgets or fgetws fails. |
+| CERT FIO41-C | - | major | **not detected** | Do not pass a side-effecting stream expression to getc, putc, getwc or putwc. |
+| CERT FIO42-C | - | critical | **not detected** | Close every file once it is no longer needed. |
+| CERT FIO44-C | - | major | **not detected** | Only pass fsetpos values that fgetpos produced. |
+| CERT FIO45-C | - | critical | **not detected** | Avoid time-of-check to time-of-use races on file access. |
+| CERT FIO46-C | - | critical | **not detected** | Do not use a FILE pointer after the stream is closed. |
+| CERT FIO47-C | - | critical | **not detected** | Keep format strings well-formed and matched to their arguments. |
+| CERT FLP30-C | - | critical | clang-tidy | Do not drive a loop counter with a floating-point variable. |
 | CERT FLP32-C | - | critical | cppcheck | Prevent or detect domain and range errors in floating-point math functions. |
+| CERT FLP34-C | - | major | **not detected** | Confirm a floating-point value fits the destination before converting it. |
+| CERT FLP36-C | - | major | **not detected** | Watch for precision loss when converting integers to floating-point. |
 | CERT FLP37-C | - | major | native, clang-tidy, compiler | Do not compare floating-point values with == or != for equality. |
+| CERT FLP38-C | - | major | **not detected** | Use type-generic math macros only in the ways the standard defines. |
 | CERT INT30-C | - | critical | **not detected** | Ensure unsigned integer operations do not wrap unintentionally. |
 | CERT INT31-C | - | critical | cppcheck, compiler | Ensure integer conversions do not lose or misinterpret data. |
 | CERT INT32-C | - | critical | cppcheck | Ensure signed integer operations do not overflow (undefined behavior). |
 | CERT INT33-C | - | critical | cppcheck | Ensure division and remainder operations cannot divide by zero. |
+| CERT INT34-C | - | critical | **not detected** | Keep shift distances non-negative and below the operand's bit width. |
+| CERT INT35-C | - | major | **not detected** | Use a type's real precision, not its sizeof-derived bit count. |
+| CERT INT36-C | - | major | **not detected** | Convert between pointers and integers only when the value is representable. |
 | CERT MEM30-C | - | blocker | cppcheck | Do not access memory after it has been freed. |
 | CERT MEM31-C | - | blocker | cppcheck | Free dynamically allocated memory exactly once. |
+| CERT MEM33-C | - | major | **not detected** | Allocate and copy structures with a flexible array member dynamically and correctly. |
 | CERT MEM34-C | - | blocker | cppcheck | Only free memory that was dynamically allocated. |
 | CERT MEM35-C | - | critical | **not detected** | Allocate sufficient memory for an object, guarding size computations against overflow. |
+| CERT MEM36-C | - | major | **not detected** | Do not assume realloc preserves an over-aligned object's alignment. |
+| CERT MSC30-C | - | major | clang-tidy | Do not rely on rand() for pseudorandom numbers. |
 | CERT MSC32-C | - | critical | native, clang-tidy | Seed pseudorandom generators properly; do not use rand() where quality matters. |
 | CERT MSC33-C | - | blocker | native, clang-tidy | Do not pass invalid data to asctime()/similar fixed-buffer time functions. |
+| CERT MSC37-C | - | critical | **not detected** | Ensure control never falls off the end of a value-returning function. |
+| CERT MSC38-C | - | major | **not detected** | Do not take the address of a predefined identifier that may be a macro. |
 | CERT MSC39-C | - | critical | cppcheck | Do not call va_arg() on a va_list whose value is indeterminate (already consumed by another traversal, or used after va_end). |
+| CERT MSC40-C | - | major | **not detected** | Do not violate the language's documented constraints. |
+| CERT MSC41-C | - | critical | **not detected** | Never embed secrets or credentials in source code. |
+| CERT POS30-C | - | blocker | **not detected** | Use readlink() correctly, including its non-terminating result. |
+| CERT POS34-C | - | critical | **not detected** | Do not pass putenv() a pointer into automatic storage. |
+| CERT POS35-C | - | blocker | **not detected** | Avoid races when checking whether a path is a symbolic link. |
+| CERT POS36-C | - | blocker | **not detected** | Drop privileges in the correct order when relinquishing them. |
+| CERT POS37-C | - | blocker | **not detected** | Verify that privilege relinquishment actually succeeded. |
+| CERT POS38-C | - | major | **not detected** | Beware descriptor-sharing races between parent and child after fork. |
+| CERT POS39-C | - | critical | **not detected** | Apply correct byte ordering when moving data between systems. |
+| CERT POS44-C | - | major | clang-tidy | Do not terminate threads by sending signals. |
+| CERT POS47-C | - | major | clang-tidy | Do not use asynchronously cancelable threads. |
+| CERT POS48-C | - | critical | **not detected** | Do not unlock or destroy a mutex owned by another thread. |
+| CERT POS49-C | - | major | **not detected** | Protect multi-thread-accessed data with a mutex, and isolate adjacent data. |
+| CERT POS50-C | - | major | **not detected** | Give objects shared between pthreads adequate storage duration. |
+| CERT POS51-C | - | major | **not detected** | Lock pthread mutexes in a predefined order to avoid deadlock. |
+| CERT POS52-C | - | major | **not detected** | Do not perform blocking operations while holding a POSIX lock. |
+| CERT POS53-C | - | critical | **not detected** | Use only one mutex for concurrent waits on a given condition variable. |
+| CERT POS54-C | - | blocker | **not detected** | Check and handle errors returned by POSIX library calls. |
+| CERT PRE30-C | - | major | **not detected** | Do not build a universal character name by pasting tokens together. |
 | CERT PRE31-C | - | major | **not detected** | Avoid side effects in arguments to unsafe (multi-evaluating) macros. |
+| CERT PRE32-C | - | major | **not detected** | Do not place preprocessor directives inside the argument list of a function-like macro. |
 | CERT SIG30-C | - | critical | clang-tidy | Call only async-signal-safe functions inside signal handlers. |
+| CERT SIG31-C | - | blocker | **not detected** | Do not access shared objects from inside a signal handler. |
+| CERT SIG34-C | - | major | **not detected** | Do not re-register a handler with signal() from inside an interruptible handler. |
+| CERT SIG35-C | - | major | **not detected** | Do not return normally from a handler for a computational exception. |
+| CERT STR30-C | - | critical | **not detected** | Treat string literals as read-only. |
 | CERT STR31-C | - | blocker | native, cppcheck | Guarantee destination storage is large enough for string data plus the null terminator (gets/strcpy/strcat/sprintf are unbounded). |
 | CERT STR32-C | - | blocker | cppcheck | Do not pass non-null-terminated character sequences to functions that expect strings. |
+| CERT STR34-C | - | critical | clang-tidy | Cast a char to unsigned char before widening it to a larger integer type. |
+| CERT STR37-C | - | major | **not detected** | Pass <ctype.h> functions only values representable as unsigned char. |
+| CERT STR38-C | - | blocker | **not detected** | Do not mix narrow and wide string types or their function families. |
+| CERT WIN30-C | - | major | **not detected** | Match each allocation with the deallocation function from the same family. |
 
-_Total: 123 rules across 3 standards._
+_Total: 214 rules across 3 standards._

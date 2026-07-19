@@ -286,7 +286,8 @@ PATTERNS: list[dict] = [
         "concern": "pointer type punning and casts",
         "keywords": ["cast pointer", "type pun", "reinterpret", "aliasing", "union",
                      "incompatible type", "bit cast"],
-        "rules": ["MISRA 11.3", "MISRA 19.2", "MISRA 19.1", "CERT EXP39-C"],
+        "rules": ["MISRA 11.3", "MISRA 19.2", "MISRA 19.1", "CERT EXP39-C",
+                  "CERT EXP42-C"],
         "avoid": "float f = *(float *)&bits;   /* incompatible-type access: aliasing UB */",
         "prefer": "float f;\n(void)memcpy(&f, &bits, sizeof f);   /* copy the bytes, no aliasing */",
         "why": "Accessing an object through an incompatible pointer type (or a "
@@ -297,7 +298,7 @@ PATTERNS: list[dict] = [
         "concern": "variable-length arrays and array bounds",
         "keywords": ["vla", "variable length array", "array size", "buf[n]",
                      "stack array", "bounds"],
-        "rules": ["MISRA 18.8", "CERT ARR32-C"],
+        "rules": ["MISRA 18.8", "CERT ARR32-C", "CERT ARR39-C"],
         "avoid": "void f(size_t n){ uint8_t buf[n]; }   /* VLA: stack size unknown */",
         "prefer": "void f(size_t n){\n    uint8_t buf[MAX_N];\n"
                   "    if (n > MAX_N) { handle_range(); return; }\n    /* use buf[0..n) */\n}",
@@ -317,7 +318,7 @@ PATTERNS: list[dict] = [
         "concern": "floating-point comparison and math errors",
         "keywords": ["float", "double", "==", "equality", "sqrt", "log", "nan",
                      "epsilon", "domain"],
-        "rules": ["CERT FLP37-C", "CERT FLP32-C"],
+        "rules": ["CERT FLP37-C", "CERT FLP32-C", "CERT FLP30-C"],
         "avoid": "if (x == 0.0) { ... }   /* exact float equality is unreliable */\n"
                  "y = sqrt(v);            /* v may be negative -> domain error */",
         "prefer": "if (fabs(x) < EPSILON) { ... }\n"
@@ -337,7 +338,7 @@ PATTERNS: list[dict] = [
     {
         "concern": "random number seeding",
         "keywords": ["rand", "random", "srand", "prng", "entropy", "nonce", "token"],
-        "rules": ["CERT MSC32-C"],
+        "rules": ["CERT MSC32-C", "CERT MSC30-C"],
         "avoid": "int r = rand();   /* unseeded, low quality, predictable */",
         "prefer": "/* seed a real PRNG once from a hardware entropy source at init; */\n"
                   "/* NEVER use rand() for keys, nonces, or tokens */",
@@ -510,6 +511,26 @@ PATTERNS: list[dict] = [
                "the standards can't.",
     },
     {
+        "concern": "threads: waiting, cancellation and shutdown",
+        "keywords": ["thread", "cancel", "kill", "pthread", "condition variable",
+                     "cnd_wait", "spurious wakeup", "shutdown", "join"],
+        "rules": ["CERT CON36-C", "CERT POS44-C", "CERT POS47-C"],
+        "avoid": "if (!ready) {\n"
+                 "    cnd_wait(&cv, &m);   /* may wake spuriously */\n"
+                 "}\n"
+                 "pthread_kill(worker, SIGTERM);   /* killing a thread */",
+        "prefer": "while (!ready) {\n"
+                  "    cnd_wait(&cv, &m);   /* re-test after every wake */\n"
+                  "}\n"
+                  "\n"
+                  "atomic_store(&stop_requested, true);   /* cooperative exit */\n"
+                  "(void)thrd_join(worker, NULL);",
+        "why": "A condition-variable wait can return without the predicate "
+               "becoming true, so the test must be a loop, not an if. And a "
+               "thread killed by a signal leaves its locks held and its "
+               "allocations leaked -- ask it to stop and join it instead.",
+    },
+    {
         "concern": "if / else-if chains",
         "keywords": ["if", "else", "else if", "chain", "final else", "unhandled",
                      "branch", "condition"],
@@ -641,7 +662,7 @@ PATTERNS: list[dict] = [
         "concern": "character classification (ctype) argument range",
         "keywords": ["ctype", "isalpha", "isdigit", "isspace", "toupper", "tolower",
                      "char", "unsigned char", "EOF"],
-        "rules": ["MISRA 21.13"],
+        "rules": ["MISRA 21.13", "CERT STR34-C"],
         "avoid": "char c = line[i];\nif (isdigit(c)) { ... }   "
                  "/* negative if char is signed */",
         "prefer": "char c = line[i];\nif (isdigit((unsigned char)c)) { ... }",
@@ -671,7 +692,7 @@ PATTERNS: list[dict] = [
         "concern": "file streams and FILE handles",
         "keywords": ["FILE", "fopen", "fclose", "stream", "fwrite", "fread",
                      "read-only", "closed stream", "dereference"],
-        "rules": ["MISRA 22.4", "MISRA 22.5", "MISRA 22.6"],
+        "rules": ["MISRA 22.4", "MISRA 22.5", "MISRA 22.6", "CERT FIO38-C"],
         "avoid": "FILE *f = fopen(path, \"r\");\n"
                  "fprintf(f, \"data\");   /* opened read-only */\n"
                  "fclose(f);\n"

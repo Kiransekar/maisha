@@ -6,6 +6,20 @@ All notable changes to Maisha are documented here. Format loosely follows
 ## [Unreleased]
 
 ### Added
+- **SEI CERT C brought to the full normative rule set, 31 -> 122** (knowledge
+  base 123 -> 214). CERT identifiers numbered 00-29 are Recommendations and are
+  non-normative; only the Rules (30+) are carried. Severity follows the
+  published Priority: L1 blocker, L2 critical, L3 major.
+  Nine of the new rules are backed by a clang-tidy `cert-*` check and so enter
+  the enforced tier (ARR39-C, CON36-C, EXP42-C, FIO38-C, FLP30-C, MSC30-C,
+  POS44-C, POS47-C, STR34-C); the rest are reference-tier, carried for
+  cross-standard equivalence, deviation records, Guideline Enforcement Plan
+  rows and SARIF import mapping.
+  This is the first expansion the tier split makes practical: holding 91 new
+  entries to the one-authoring-pattern-per-rule bar would have blocked it
+  outright.
+
+### Added
 - **INSTALL.md** — setup from scratch through to a connected editor or agent:
   install, the external analyzers (with the cppcheck-without-its-MISRA-addon
   trap called out), verification via `maishac doctor`, a first scan, ready-made
