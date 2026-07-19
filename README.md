@@ -396,6 +396,15 @@ labeled on the tracker.
 
 ## License / disclaimer
 
-Rule summaries are original paraphrases; MISRA®, BARR-C and SEI CERT C are the
-property of their respective owners. Maisha output does not constitute a
-formal compliance certification.
+Rule summaries are **independent restatements written for this project**, not
+reproductions of any standard's text. Rule identifiers and categories are facts
+used to reference the guidelines; the wording is ours.
+
+MISRA® is a registered trademark of The MISRA Consortium Limited. BARR-C:2018 is
+copyright Barr Group (Integrated Embedded, LLC) and is named here as the source
+of those rule identifiers, as the standard invites tools that detect violations
+to do. SEI CERT® is a registered trademark of Carnegie Mellon University. None of
+these organisations endorse or are affiliated with Maisha.
+
+For normative wording, consult the official documents. Maisha output does not
+constitute a formal compliance certification.

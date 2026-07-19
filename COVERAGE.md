@@ -105,26 +105,26 @@ carried for cross-referencing, deviation records and SARIF import.
 
 | Rule | Category | Severity | Detected by | Summary |
 |------|----------|----------|-------------|---------|
-| BARR-C 1.1a | - | major | **not detected** | Code shall compile cleanly at the compiler's strictest warning level. |
-| BARR-C 1.3a | - | major | **not detected** | Braces shall always surround the bodies of if, else, switch, while, do and for statements. |
-| BARR-C 1.7a | - | major | **not detected** | The goto, continue and break-out-of-nested-loop patterns are restricted; goto shall not be used. |
-| BARR-C 1.7c | - | major | **not detected** | Comparisons shall not test the result of an assignment. |
-| BARR-C 2.1a | - | minor | **not detected** | Only /* ... */ and // comment styles are permitted; comments shall not be nested. |
-| BARR-C 2.2 | - | minor | **not detected** | Code shall never be commented out; use version control or #if 0 with an explanatory comment only temporarily. |
-| BARR-C 3.1a | - | minor | native | Lines shall be limited to a maximum width (80 characters) for review and diff readability. |
-| BARR-C 3.2a | - | minor | native | Indentation shall use spaces, not tab characters, so alignment is identical in every tool. |
-| BARR-C 4.2a | - | minor | **not detected** | Each module shall have a header (.h) exposing only its public interface. |
-| BARR-C 5.2a | - | major | **not detected** | Fixed-width integer types from <stdint.h> shall be used instead of char/short/int/long for numeric data. |
-| BARR-C 5.4a | - | minor | **not detected** | Numeric literal suffixes shall be uppercase (U, L, UL) to prevent misreading. |
-| BARR-C 5.6a | - | major | **not detected** | Dynamic heap allocation shall be avoided in embedded firmware after initialization. |
-| BARR-C 6.1a | - | major | **not detected** | Functions shall not be recursive, directly or indirectly. |
-| BARR-C 6.2a | - | minor | **not detected** | Functions used only within one module shall be declared static. |
-| BARR-C 6.3a | - | minor | **not detected** | Function length should stay reviewable (fits on roughly one printed page, ~100 lines). |
-| BARR-C 7.1e | - | minor | **not detected** | Identifier naming: no identifiers that differ only by case, and no leading underscores (reserved). |
-| BARR-C 8.2a | - | major | **not detected** | Conditional expressions shall be explicit comparisons rather than relying on implicit truthiness of assignments. |
-| BARR-C 8.3a | - | major | **not detected** | Pointer tests shall compare explicitly against NULL. |
-| BARR-C 8.5a | - | major | **not detected** | Every switch shall end with a default case that traps unexpected values. |
-| BARR-C 8.6a | - | major | **not detected** | Loops shall have provably bounded termination (no unbounded while(1) without exit intent documented). |
+| BARR-C 1.1a | - | major | **not detected** | A build that emits no warnings at the compiler's most aggressive setting, so real defects are never lost in routine noise. |
+| BARR-C 1.3a | - | major | **not detected** | Braces around every control-statement body, including one-line and empty ones, so adding a second statement cannot silently change scope. |
+| BARR-C 1.7a | - | major | **not detected** | Unstructured jumps are avoided: goto in particular, and any exit that leaves a reader unable to follow control flow by reading downward. |
+| BARR-C 1.7c | - | major | **not detected** | A condition tests a value; it does not perform an assignment whose result is then tested, which is how = gets written for ==. |
+| BARR-C 2.1a | - | minor | **not detected** | Comment syntax stays within the two standard forms, and comment openers are never embedded inside a comment where they do not nest. |
+| BARR-C 2.2 | - | minor | **not detected** | Disabled code is deleted rather than commented out, since version control already remembers it and stale commented blocks mislead readers. |
+| BARR-C 3.1a | - | minor | native | A bounded line width, so side-by-side review and diff tools show a full line without wrapping or horizontal scrolling. |
+| BARR-C 3.2a | - | minor | native | Indentation uses spaces alone, so the alignment a reader sees does not depend on how their editor happens to render a tab. |
+| BARR-C 4.2a | - | minor | **not detected** | A module presents its callers a header describing only what they may use, keeping internal structure out of the public interface. |
+| BARR-C 5.2a | - | major | **not detected** | Numeric data uses the width-explicit types from <stdint.h>, because the built-in types vary in size between targets and toolchains. |
+| BARR-C 5.4a | - | minor | **not detected** | Literal suffixes are written in upper case, since a lower-case l is easily misread as the digit one in most fonts. |
+| BARR-C 5.6a | - | major | **not detected** | Firmware avoids the heap once running, so worst-case memory use stays provable and allocation cannot fail at an inconvenient moment. |
+| BARR-C 6.1a | - | major | **not detected** | Call graphs stay acyclic, direct and mutual recursion alike, so worst-case stack depth can be bounded by inspection. |
+| BARR-C 6.2a | - | minor | **not detected** | Anything not part of a module's published interface is given internal linkage, keeping the global namespace to what is genuinely shared. |
+| BARR-C 6.3a | - | minor | **not detected** | Functions stay short enough to read in one sitting -- on the order of a printed page -- so their behaviour can be reasoned about whole. |
+| BARR-C 7.1e | - | minor | **not detected** | Identifiers are distinguishable by more than letter case, and leave the leading-underscore namespace to the implementation that reserves it. |
+| BARR-C 8.2a | - | major | **not detected** | A condition states the comparison it means, rather than relying on a value being incidentally non-zero. |
+| BARR-C 8.3a | - | major | **not detected** | A pointer is tested against NULL explicitly, so the reader sees a pointer check rather than something that could be an integer test. |
+| BARR-C 8.5a | - | major | **not detected** | Every switch carries a default clause, giving unexpected values a defined destination instead of falling through the statement silently. |
+| BARR-C 8.6a | - | major | **not detected** | Loop termination is provable, so an unbounded loop is a deliberate, documented decision rather than an oversight. |
 
 ## CERT-C — 122 rules (7 detected with zero dependencies)
 
